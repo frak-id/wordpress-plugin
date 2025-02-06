@@ -2,7 +2,7 @@
 /*
 Plugin Name: Frak
 Description: Adds Frak configuration to your WordPress site
-Version: 0.1
+Version: 0.2
 Author: Frak-Labs
 */
 
@@ -121,7 +121,7 @@ JS;
         
         <div class="frak-links">
             <a href="https://docs.frak.id/components/frak-setup" target="_blank">📚 Documentation</a>
-            <a href="https://dashboard.frak.id/" target="_blank">🎯 Dashboard</a>
+            <a href="https://business.frak.id/" target="_blank">🎯 Dashboard</a>
         </div>
 
         <form method="post" action="">
