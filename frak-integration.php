@@ -106,12 +106,10 @@ window.FrakSetup = {
                 icon: "{$logo_url}",
             },
             isDismissible: true,
-            lang: "fr",
+            lang: "en",
         },
     },
     modalShareConfig: {
-        text: "Je t'invite à découvrir l'univers et à réserver un essai. Avec ce lien, une surprise t'attend ! 🎁",
-        popupTitle: "Prêt(e) à partager votre expérience et à parrainer vos proches ?",
         link: window.location.href,
     }
 };
@@ -175,7 +173,6 @@ JS;
             var appName = $('#frak_app_name').val();
             var logoUrl = $('#frak_logo_url').val();
             var currentConfig = editor.codemirror.getValue();
-            console.log("Updating config with stuff", { appName, logoUrl, currentConfig});
             
             // Update name
             currentConfig = currentConfig.replace(
