@@ -1,0 +1,31 @@
+name: Create Plugin Release
+
+on:
+  push:
+    tags:
+      - 'v*' # Trigger on version tags
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Create plugin directory
+        run: |
+          mkdir -p frak-integration
+          cp frak-integration.php frak-integration/
+          
+      - name: Create ZIP file
+        run: zip -r frak-integration.zip frak-integration
+        
+      - name: Create Release
+        id: create_release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: frak-integration.zip
+          generate_release_notes: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

@@ -1,8 +1,8 @@
 <?php
 /*
-Plugin Name: Frak Integration
+Plugin Name: Frak
 Description: Adds Frak configuration to your WordPress site
-Version: 1.0
+Version: 0.1
 Author: Frak-Labs
 */
 
