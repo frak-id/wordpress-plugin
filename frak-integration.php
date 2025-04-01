@@ -34,6 +34,9 @@ function frak_register_settings() {
         }
     ));
     register_setting('frak_settings', 'frak_enable_purchase_tracking');
+    register_setting('frak_settings', 'frak_enable_floating_button');
+    register_setting('frak_settings', 'frak_show_reward');
+    register_setting('frak_settings', 'frak_button_classname');
 }
 add_action('admin_init', 'frak_register_settings');
 
@@ -75,18 +78,27 @@ function frak_settings_page() {
         $logo_url = esc_url_raw($_POST['frak_logo_url']);
         $custom_config = stripslashes($_POST['frak_custom_config']);
         $enable_tracking = isset($_POST['frak_enable_purchase_tracking']) ? 1 : 0;
+        $enable_button = isset($_POST['frak_enable_floating_button']) ? 1 : 0;
+        $show_reward = isset($_POST['frak_show_reward']) ? 1 : 0;
+        $button_classname = sanitize_text_field($_POST['frak_button_classname']);
 
         // Save everything
         update_option('frak_app_name', $app_name);
         update_option('frak_logo_url', $logo_url);
         update_option('frak_custom_config', $custom_config);
         update_option('frak_enable_purchase_tracking', $enable_tracking);
+        update_option('frak_enable_floating_button', $enable_button);
+        update_option('frak_show_reward', $show_reward);
+        update_option('frak_button_classname', $button_classname);
     }
     
     $app_name = get_option('frak_app_name', 'Your App Name');
     $logo_url = get_option('frak_logo_url', '');
     $custom_config = get_option('frak_custom_config', '');
     $enable_tracking = get_option('frak_enable_purchase_tracking', 0);
+    $enable_button = get_option('frak_enable_floating_button', 0);
+    $show_reward = get_option('frak_show_reward', 0);
+    $button_classname = get_option('frak_button_classname', '');
     
     if (empty($custom_config)) {
         $custom_config = <<<JS
@@ -182,6 +194,56 @@ JS;
                 </tr>
             </table>
             
+            <h2>Floating Button Configuration</h2>
+            <table class="form-table">
+                <tr>
+                    <th scope="row">
+                        <label for="frak_enable_floating_button">Enable Floating Button</label>
+                    </th>
+                    <td>
+                        <label>
+                            <input type="checkbox" id="frak_enable_floating_button" 
+                                   name="frak_enable_floating_button" value="1" 
+                                   <?php checked($enable_button, 1); ?>>
+                            Show floating button on all pages
+                        </label>
+                    </td>
+                </tr>
+                <tr>
+                    <th scope="row">
+                        <label for="frak_show_reward">Show Potential Reward</label>
+                    </th>
+                    <td>
+                        <label>
+                            <input type="checkbox" id="frak_show_reward" 
+                                   name="frak_show_reward" value="1" 
+                                   <?php checked($show_reward, 1); ?>
+                                   <?php echo $enable_button ? '' : 'disabled'; ?>>
+                            Display potential reward on the button
+                        </label>
+                    </td>
+                </tr>
+                <tr>
+                    <th scope="row">
+                        <label for="frak_button_classname">Custom Class Name</label>
+                    </th>
+                    <td>
+                        <input type="text" id="frak_button_classname" 
+                               name="frak_button_classname" 
+                               value="<?php echo esc_attr($button_classname); ?>" 
+                               class="regular-text"
+                               <?php echo $enable_button ? '' : 'disabled'; ?>>
+                        <p class="description">Add custom CSS classes to the button</p>
+                    </td>
+                </tr>
+                <tr>
+                    <th scope="row">Button Position</th>
+                    <td>
+                        <p class="description">The button position is controlled by the <code>modalWalletConfig.metadata.position</code> setting in the advanced configuration above. It can be set to either "left" or "right".</p>
+                    </td>
+                </tr>
+            </table>
+            
             <h2>Advanced Configuration</h2>
             <p>Customize your Frak configuration below:</p>
             <textarea id="frak_custom_config" name="frak_custom_config" 
@@ -225,7 +287,15 @@ JS;
             editor.codemirror.setValue(currentConfig);
         }
 
+        // Handle floating button settings
+        function toggleFloatingButtonSettings() {
+            var enabled = $('#frak_enable_floating_button').is(':checked');
+            $('#frak_show_reward, #frak_button_classname').prop('disabled', !enabled);
+        }
+
         $('#frak_app_name, #frak_logo_url').on('input', updateConfig);
+        $('#frak_enable_floating_button').on('change', toggleFloatingButtonSettings);
+        toggleFloatingButtonSettings(); // Initial state
     });
     </script>
     <?php
@@ -253,6 +323,31 @@ function frak_add_to_frontend() {
     <?php
 }
 add_action('wp_head', 'frak_add_to_frontend');
+
+// Add floating button to the body
+function frak_add_floating_button() {
+    if (is_admin()) {
+        return;
+    }
+
+    if (!get_option('frak_enable_floating_button', 0)) {
+        return;
+    }
+
+    $show_reward = get_option('frak_show_reward', 0);
+    $classname = get_option('frak_button_classname', '');
+    
+    $attributes = array();
+    if ($show_reward) {
+        $attributes[] = 'use-reward';
+    }
+    if (!empty($classname)) {
+        $attributes[] = 'classname="' . esc_attr($classname) . '"';
+    }
+    
+    echo '<frak-button-wallet ' . implode(' ', $attributes) . '></frak-button-wallet>';
+}
+add_action('wp_footer', 'frak_add_floating_button');
 
 // Add WooCommerce purchase tracking
 function frak_add_purchase_tracking($order_id) {
