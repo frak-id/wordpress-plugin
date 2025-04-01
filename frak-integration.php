@@ -33,6 +33,7 @@ function frak_register_settings() {
             return stripslashes($input);
         }
     ));
+    register_setting('frak_settings', 'frak_enable_purchase_tracking');
 }
 add_action('admin_init', 'frak_register_settings');
 
@@ -73,16 +74,19 @@ function frak_settings_page() {
         $app_name = sanitize_text_field($_POST['frak_app_name']);
         $logo_url = esc_url_raw($_POST['frak_logo_url']);
         $custom_config = stripslashes($_POST['frak_custom_config']);
+        $enable_tracking = isset($_POST['frak_enable_purchase_tracking']) ? 1 : 0;
 
         // Save everything
         update_option('frak_app_name', $app_name);
         update_option('frak_logo_url', $logo_url);
         update_option('frak_custom_config', $custom_config);
+        update_option('frak_enable_purchase_tracking', $enable_tracking);
     }
     
     $app_name = get_option('frak_app_name', 'Your App Name');
     $logo_url = get_option('frak_logo_url', '');
     $custom_config = get_option('frak_custom_config', '');
+    $enable_tracking = get_option('frak_enable_purchase_tracking', 0);
     
     if (empty($custom_config)) {
         $custom_config = <<<JS
@@ -163,6 +167,19 @@ JS;
                                value="<?php echo esc_url($logo_url); ?>" class="regular-text">
                     </td>
                 </tr>
+                <tr>
+                    <th scope="row">
+                        <label for="frak_enable_purchase_tracking">WooCommerce Purchase Tracking</label>
+                    </th>
+                    <td>
+                        <label>
+                            <input type="checkbox" id="frak_enable_purchase_tracking" 
+                                   name="frak_enable_purchase_tracking" value="1" 
+                                   <?php checked($enable_tracking, 1); ?>>
+                            Enable WooCommerce orders tracking
+                        </label>
+                    </td>
+                </tr>
             </table>
             
             <h2>Advanced Configuration</h2>
@@ -236,3 +253,43 @@ function frak_add_to_frontend() {
     <?php
 }
 add_action('wp_head', 'frak_add_to_frontend');
+
+// Add WooCommerce purchase tracking
+function frak_add_purchase_tracking($order_id) {
+    // Early exit if tracking is disabled
+    if (!get_option('frak_enable_purchase_tracking', 0)) {
+        return;
+    }
+
+    if (!$order_id) return;
+
+    $order = wc_get_order($order_id);
+    if (!$order) return;
+
+    $customer_id = $order->get_user_id();
+    $order_key = $order->get_order_key();
+    $transaction_id = $order->get_transaction_id();
+
+    echo "<script>
+            const interactionToken = sessionStorage.getItem('frak-wallet-interaction-token');
+
+            const payload = {
+                customerId: " . json_encode($customer_id) . ",
+                orderId: " . json_encode($order_id) . ",
+                token: " . json_encode($order_key) . "
+            };
+
+            fetch('https://backend.frak.id/interactions/listenForPurchase', {
+                method: 'POST',
+                headers: {
+                    'Accept': 'application/json',
+                    'Content-Type': 'application/json',
+                    'x-wallet-sdk-auth': interactionToken
+                },
+                body: JSON.stringify(payload)
+            });
+    </script>";
+}
+
+// Hook into WooCommerce
+add_action('woocommerce_thankyou', 'frak_add_purchase_tracking', 10, 1);
