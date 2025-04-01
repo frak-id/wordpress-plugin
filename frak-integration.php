@@ -2,7 +2,7 @@
 /*
 Plugin Name: Frak
 Description: Adds Frak configuration to your WordPress site
-Version: 0.3
+Version: 0.4
 Author: Frak-Labs
 */
 
@@ -23,6 +23,86 @@ function frak_add_admin_menu() {
     );
 }
 add_action('admin_menu', 'frak_add_admin_menu');
+
+// Function to get the static config file path
+function frak_get_config_file_path() {
+    $upload_dir = wp_upload_dir();
+    $frak_dir = $upload_dir['basedir'] . '/frak';
+    if (!file_exists($frak_dir)) {
+        wp_mkdir_p($frak_dir);
+    }
+    return $frak_dir . '/config.js';
+}
+
+// Function to get the config file URL
+function frak_get_config_file_url() {
+    $upload_dir = wp_upload_dir();
+    return $upload_dir['baseurl'] . '/frak/config.js';
+}
+
+// Function to save the static config file
+function frak_save_config_file($config_content) {
+    $file_path = frak_get_config_file_path();
+    $result = file_put_contents($file_path, $config_content);
+    
+    if ($result !== false) {
+        // Update the last modification timestamp
+        update_option('frak_config_last_modified', time());
+        return true;
+    }
+    return false;
+}
+
+// Function to get the config file with cache busting
+function frak_get_config_script_tag() {
+    $last_modified = get_option('frak_config_last_modified', 0);
+    $config_url = frak_get_config_file_url();
+    return sprintf(
+        '<script src="%s?v=%d" type="text/javascript"></script>',
+        esc_url($config_url),
+        $last_modified
+    );
+}
+
+// Add rewrite rules for the config file
+function frak_add_rewrite_rules() {
+    add_rewrite_rule(
+        'frak/config\.js$',
+        'index.php?frak_config=1',
+        'top'
+    );
+}
+add_action('init', 'frak_add_rewrite_rules');
+
+// Handle the config file request
+function frak_handle_config_request($wp) {
+    if (isset($wp->query_vars['frak_config'])) {
+        $file_path = frak_get_config_file_path();
+        
+        if (file_exists($file_path)) {
+            $last_modified = get_option('frak_config_last_modified', 0);
+            
+            // Set proper headers for caching
+            header('Content-Type: application/javascript');
+            header('Cache-Control: public, max-age=31536000'); // 1 year
+            header('Last-Modified: ' . gmdate('D, d M Y H:i:s', $last_modified) . ' GMT');
+            header('Expires: ' . gmdate('D, d M Y H:i:s', time() + 31536000) . ' GMT');
+            
+            // Check if the browser has a cached version
+            if (isset($_SERVER['HTTP_IF_MODIFIED_SINCE'])) {
+                $if_modified_since = strtotime($_SERVER['HTTP_IF_MODIFIED_SINCE']);
+                if ($if_modified_since >= $last_modified) {
+                    header('HTTP/1.1 304 Not Modified');
+                    exit;
+                }
+            }
+            
+            readfile($file_path);
+            exit;
+        }
+    }
+}
+add_action('parse_request', 'frak_handle_config_request');
 
 // Register settings
 function frak_register_settings() {
@@ -90,6 +170,9 @@ function frak_settings_page() {
         update_option('frak_enable_floating_button', $enable_button);
         update_option('frak_show_reward', $show_reward);
         update_option('frak_button_classname', $button_classname);
+
+        // Save the config to a static file
+        frak_save_config_file($custom_config);
     }
     
     $app_name = get_option('frak_app_name', 'Your App Name');
@@ -307,17 +390,8 @@ function frak_add_to_frontend() {
         return;
     }
     
-    $custom_config = get_option('frak_custom_config');
-    if (!empty($custom_config)) {
-        // Remove whitespace from the config
-        $custom_config = preg_replace('/\s+/', ' ', $custom_config);
-        $custom_config = preg_replace('/\s*([{}:,=+\-*\/()])\s*/', '$1', $custom_config);
-
-        // Add it to the header
-        echo "<script>\n";
-        echo stripslashes($custom_config);
-        echo "\n</script>\n";
-    }
+    // Add the static config file with cache busting
+    echo frak_get_config_script_tag();
     ?>
     <script src="https://cdn.jsdelivr.net/npm/@frak-labs/components@latest/cdn/components.js" defer="defer"></script>
     <?php
