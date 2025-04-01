@@ -2,7 +2,7 @@
 /*
 Plugin Name: Frak
 Description: Adds Frak configuration to your WordPress site
-Version: 0.2
+Version: 0.3
 Author: Frak-Labs
 */
 
@@ -87,31 +87,50 @@ function frak_settings_page() {
     if (empty($custom_config)) {
         $custom_config = <<<JS
 window.FrakSetup = {
+    // Overall config of the Frak SDK
     config: {
         metadata: {
             name: "{$app_name}",
+            lang: "en",
+            currency: "eur",
+            logoUrl: "{$logo_url}",
+            homepageLink: window.location.origin,
+        },
+        customizations: {
+            // Customize the i18n messages
+            // i18n: {
+            // },
         },
         domain: window.location.host,
     },
+    // Config for the generic modal view
     modalConfig: {
         login: {
             allowSso: true,
-            ssoMetadata: {
-                logoUrl: "{$logo_url}",
-                homepageLink: window.location.origin,
-            },
+            ssoMetadata: {},
         },
         metadata: {
-            header: {
-                icon: "{$logo_url}",
-            },
             isDismissible: true,
-            lang: "en",
         },
     },
+    // Config for the sharing modal step
     modalShareConfig: {
         link: window.location.href,
-    }
+    },  
+    // Config for the embedded modal view
+    modalWalletConfig: {
+        metadata: {
+            position: "left",
+        },
+        loggedIn: {
+            action: {
+                key: "sharing",
+                options: {
+                    link: window.location.href,
+                },
+            },
+        },
+    },
 };
 JS;
     }
@@ -180,15 +199,9 @@ JS;
                 '$1' + appName + '$2'
             );
             
-            // Update both logoUrl instances
+            // Update the logoUrl
             currentConfig = currentConfig.replace(
-                /(ssoMetadata:\s*{\s*logoUrl:\s*")[^"]*(")/,
-                '$1' + logoUrl + '$2'
-            );
-            
-            // Update icon
-            currentConfig = currentConfig.replace(
-                /(header:\s*{\s*icon:\s*")[^"]*(")/,
+                /(logoUrl:\s*")[^"]*(")/,
                 '$1' + logoUrl + '$2'
             );
             
