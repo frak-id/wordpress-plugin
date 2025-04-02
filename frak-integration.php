@@ -2,7 +2,7 @@
 /*
 Plugin Name: Frak
 Description: Adds Frak configuration to your WordPress site
-Version: 0.4
+Version: 0.5
 Author: Frak-Labs
 */
 
@@ -51,17 +51,6 @@ function frak_save_config_file($config_content) {
         return true;
     }
     return false;
-}
-
-// Function to get the config file with cache busting
-function frak_get_config_script_tag() {
-    $last_modified = get_option('frak_config_last_modified', 0);
-    $config_url = frak_get_config_file_url();
-    return sprintf(
-        '<script src="%s?v=%d" type="text/javascript"></script>',
-        esc_url($config_url),
-        $last_modified
-    );
 }
 
 // Add rewrite rules for the config file
@@ -391,21 +380,42 @@ function frak_add_to_frontend() {
     }
     
     // Add the static config file with cache busting
-    echo frak_get_config_script_tag();
-    ?>
-    <script src="https://cdn.jsdelivr.net/npm/@frak-labs/components@latest/cdn/components.js" defer="defer"></script>
-    <?php
+    $config_script = frak_get_config_file_url();
+    if (!empty($config_script)) {
+        wp_enqueue_script(
+            'frak-config',
+            $config_script,
+            array(),
+            get_option('frak_config_last_modified', 0),
+            array(
+                'strategy' => 'defer'
+            )
+        );
+    }
+    
+    // The version of the components script correspond to the current day of the year, to ensure it's not cached more than 24hr
+    $components_script_version = date('zo');
+    // Add the Frak components script
+    wp_enqueue_script(
+        'frak-components',
+        'https://cdn.jsdelivr.net/npm/@frak-labs/components@latest/cdn/components.js',
+        array(),
+        $components_script_version,
+        array(
+            'strategy' => 'defer'
+        )
+    );
 }
-add_action('wp_head', 'frak_add_to_frontend');
+add_action('wp_enqueue_scripts', 'frak_add_to_frontend', 20);
 
 // Add floating button to the body
 function frak_add_floating_button() {
     if (is_admin()) {
-        return;
+        return '';
     }
 
     if (!get_option('frak_enable_floating_button', 0)) {
-        return;
+        return '';
     }
 
     $show_reward = get_option('frak_show_reward', 0);
@@ -419,9 +429,60 @@ function frak_add_floating_button() {
         $attributes[] = 'classname="' . esc_attr($classname) . '"';
     }
     
-    echo '<frak-button-wallet ' . implode(' ', $attributes) . '></frak-button-wallet>';
+    return '<frak-button-wallet ' . implode(' ', $attributes) . '></frak-button-wallet>';
 }
-add_action('wp_footer', 'frak_add_floating_button');
+
+// Add floating button to footer
+function frak_output_floating_button() {
+    echo frak_add_floating_button();
+}
+add_action('wp_footer', 'frak_output_floating_button');
+
+// Fallback function to inject scripts if wp_head/wp_footer are not available
+function frak_fallback_injection() {
+    // Only inject if we haven't already and if we're not in admin
+    if (is_admin()) {
+        return;
+    }
+
+    // Check if scripts are already in the output buffer to prevent duplicates
+    $has_frak_script = wp_script_is('frak-config', 'done') && wp_script_is('frak-components', 'done');
+    if ($has_frak_script) {
+        return;
+    }
+
+    $to_add = '';
+
+    // If we don't have the scripts, add them
+    if (!$has_frak_script) {
+        $config_script = frak_get_config_file_url();
+
+        // Add config script if available
+        if (!empty($config_script)) {
+            $last_modified = get_option('frak_config_last_modified', 0);
+            // Add a v=lastModified to the script tag to force cache busting
+            $final_script_url = $config_script . '?ver=' . $last_modified;
+            $to_add .= sprintf(
+                '<script src="%s" defer></script>',
+                esc_url($final_script_url)
+            );
+        }
+
+        // Add Frak components script
+        $components_script_version = date('zo');
+        $final_components_script_url = 'https://cdn.jsdelivr.net/npm/@frak-labs/components@latest/cdn/components.js?ver=' . $components_script_version;
+        $to_add .= sprintf(
+            '<script src="%s" defer></script>',
+            esc_url($final_components_script_url)
+        );
+    }
+
+    // todo: Should find a way to add the button (but check with `ob_get_contents` are failing)
+
+    // Add scripts to the output buffer
+    echo $to_add;
+}
+add_action('shutdown', 'frak_fallback_injection');
 
 // Add WooCommerce purchase tracking
 function frak_add_purchase_tracking($order_id) {
