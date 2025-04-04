@@ -2,7 +2,7 @@
 /*
 Plugin Name: Frak
 Description: Adds Frak configuration to your WordPress site
-Version: 0.5
+Version: 0.6
 Author: Frak-Labs
 */
 
@@ -53,35 +53,14 @@ function frak_save_config_file($config_content) {
     return false;
 }
 
-// Handle the config file request
-function frak_handle_config_request($wp) {
-    if (isset($wp->query_vars['frak_config'])) {
-        $file_path = frak_get_config_file_path();
-        
-        if (file_exists($file_path)) {
-            $last_modified = get_option('frak_config_last_modified', 0);
-            
-            // Set proper headers for caching
-            header('Content-Type: application/javascript');
-            header('Cache-Control: public, max-age=31536000'); // 1 year
-            header('Last-Modified: ' . gmdate('D, d M Y H:i:s', $last_modified) . ' GMT');
-            header('Expires: ' . gmdate('D, d M Y H:i:s', time() + 31536000) . ' GMT');
-            
-            // Check if the browser has a cached version
-            if (isset($_SERVER['HTTP_IF_MODIFIED_SINCE'])) {
-                $if_modified_since = strtotime($_SERVER['HTTP_IF_MODIFIED_SINCE']);
-                if ($if_modified_since >= $last_modified) {
-                    header('HTTP/1.1 304 Not Modified');
-                    exit;
-                }
-            }
-            
-            readfile($file_path);
-            exit;
-        }
+// Register an activation hook to regenerate the config file
+function frak_plugin_activate() {
+    $custom_config = get_option('frak_custom_config', '');
+    if (!empty($custom_config)) {
+        frak_save_config_file($custom_config);
     }
 }
-add_action('parse_request', 'frak_handle_config_request');
+register_activation_hook(__FILE__, 'frak_plugin_activate');
 
 // Register settings
 function frak_register_settings() {
