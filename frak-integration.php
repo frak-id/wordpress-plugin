@@ -26,8 +26,8 @@ add_action('admin_menu', 'frak_add_admin_menu');
 
 // Function to get the static config file path
 function frak_get_config_file_path() {
-    $upload_dir = wp_upload_dir();
-    $frak_dir = $upload_dir['basedir'] . '/frak';
+    $plugin_dir = plugin_dir_path(__FILE__);
+    $frak_dir = $plugin_dir . 'assets/js';
     if (!file_exists($frak_dir)) {
         wp_mkdir_p($frak_dir);
     }
@@ -36,8 +36,8 @@ function frak_get_config_file_path() {
 
 // Function to get the config file URL
 function frak_get_config_file_url() {
-    $upload_dir = wp_upload_dir();
-    return $upload_dir['baseurl'] . '/frak/config.js';
+    $plugin_url = plugin_dir_url(__FILE__);
+    return $plugin_url . 'assets/js/config.js';
 }
 
 // Function to save the static config file
@@ -52,16 +52,6 @@ function frak_save_config_file($config_content) {
     }
     return false;
 }
-
-// Add rewrite rules for the config file
-function frak_add_rewrite_rules() {
-    add_rewrite_rule(
-        'frak/config\.js$',
-        'index.php?frak_config=1',
-        'top'
-    );
-}
-add_action('init', 'frak_add_rewrite_rules');
 
 // Handle the config file request
 function frak_handle_config_request($wp) {
@@ -381,7 +371,7 @@ function frak_add_to_frontend() {
     
     // Add the static config file with cache busting
     $config_script = frak_get_config_file_url();
-    if (!empty($config_script)) {
+    if (file_exists(frak_get_config_file_path())) {
         wp_enqueue_script(
             'frak-config',
             $config_script,
@@ -408,14 +398,14 @@ function frak_add_to_frontend() {
 }
 add_action('wp_enqueue_scripts', 'frak_add_to_frontend', 20);
 
-// Add floating button to the body
+// Add floating button to footer
 function frak_add_floating_button() {
     if (is_admin()) {
-        return '';
+        return;
     }
 
     if (!get_option('frak_enable_floating_button', 0)) {
-        return '';
+        return;
     }
 
     $show_reward = get_option('frak_show_reward', 0);
@@ -429,68 +419,18 @@ function frak_add_floating_button() {
         $attributes[] = 'classname="' . esc_attr($classname) . '"';
     }
     
-    return '<frak-button-wallet ' . implode(' ', $attributes) . '></frak-button-wallet>';
+    echo '<frak-button-wallet ' . implode(' ', $attributes) . '></frak-button-wallet>';
 }
-
-// Add floating button to footer
-function frak_output_floating_button() {
-    echo frak_add_floating_button();
-}
-add_action('wp_footer', 'frak_output_floating_button');
-
-// Fallback function to inject scripts if wp_head/wp_footer are not available
-function frak_fallback_injection() {
-    // Only inject if we haven't already and if we're not in admin
-    if (is_admin()) {
-        return;
-    }
-
-    // Check if scripts are already in the output buffer to prevent duplicates
-    $has_frak_script = wp_script_is('frak-config', 'done') && wp_script_is('frak-components', 'done');
-    if ($has_frak_script) {
-        return;
-    }
-
-    $to_add = '';
-
-    // If we don't have the scripts, add them
-    if (!$has_frak_script) {
-        $config_script = frak_get_config_file_url();
-
-        // Add config script if available
-        if (!empty($config_script)) {
-            $last_modified = get_option('frak_config_last_modified', 0);
-            // Add a v=lastModified to the script tag to force cache busting
-            $final_script_url = $config_script . '?ver=' . $last_modified;
-            $to_add .= sprintf(
-                '<script src="%s" defer></script>',
-                esc_url($final_script_url)
-            );
-        }
-
-        // Add Frak components script
-        $components_script_version = date('zo');
-        $final_components_script_url = 'https://cdn.jsdelivr.net/npm/@frak-labs/components@latest/cdn/components.js?ver=' . $components_script_version;
-        $to_add .= sprintf(
-            '<script src="%s" defer></script>',
-            esc_url($final_components_script_url)
-        );
-    }
-
-    // todo: Should find a way to add the button (but check with `ob_get_contents` are failing)
-
-    // Add scripts to the output buffer
-    echo $to_add;
-}
-add_action('shutdown', 'frak_fallback_injection');
+add_action('wp_footer', 'frak_add_floating_button');
 
 // Add WooCommerce purchase tracking
 function frak_add_purchase_tracking($order_id) {
-    // Early exit if tracking is disabled
-    if (!get_option('frak_enable_purchase_tracking', 0)) {
+    // Early exit if tracking is disabled or if in admin page
+    if (!get_option('frak_enable_purchase_tracking', 0) || is_admin()) {
         return;
     }
 
+    // If the order ID is not set, return
     if (!$order_id) return;
 
     $order = wc_get_order($order_id);
@@ -500,9 +440,13 @@ function frak_add_purchase_tracking($order_id) {
     $order_key = $order->get_order_key();
     $transaction_id = $order->get_transaction_id();
 
-    echo "<script>
-            const interactionToken = sessionStorage.getItem('frak-wallet-interaction-token');
-
+    // Instead of directly echoing the script, enqueue it properly
+    wp_register_script('frak-purchase-tracking', null);
+    wp_enqueue_script('frak-purchase-tracking');
+    wp_add_inline_script('frak-purchase-tracking', "
+    try {
+        const interactionToken = sessionStorage.getItem('frak-wallet-interaction-token');
+        if (interactionToken) {
             const payload = {
                 customerId: " . json_encode($customer_id) . ",
                 orderId: " . json_encode($order_id) . ",
@@ -517,9 +461,15 @@ function frak_add_purchase_tracking($order_id) {
                     'x-wallet-sdk-auth': interactionToken
                 },
                 body: JSON.stringify(payload)
+            }).catch(error => {
+                console.error('Error sending purchase tracking:', error);
             });
-    </script>";
+        }
+    } catch (error) {
+        console.error('Error sending purchase tracking:', error);
+    }
+    ");
 }
 
 // Hook into WooCommerce
-add_action('woocommerce_thankyou', 'frak_add_purchase_tracking', 10, 1);
+add_action('woocommerce_thankyou', 'frak_add_purchase_tracking');
