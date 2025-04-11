@@ -2,7 +2,7 @@
 /*
 Plugin Name: Frak
 Description: Adds Frak configuration to your WordPress site
-Version: 0.6
+Version: 0.7
 Author: Frak-Labs
 */
 
@@ -118,7 +118,7 @@ function frak_settings_page() {
         $enable_tracking = isset($_POST['frak_enable_purchase_tracking']) ? 1 : 0;
         $enable_button = isset($_POST['frak_enable_floating_button']) ? 1 : 0;
         $show_reward = isset($_POST['frak_show_reward']) ? 1 : 0;
-        $button_classname = sanitize_text_field($_POST['frak_button_classname']);
+        $button_classname = isset($_POST['frak_button_classname']) ? sanitize_text_field($_POST['frak_button_classname']) : '';
 
         // Save everything
         update_option('frak_app_name', $app_name);
