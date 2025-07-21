@@ -2,3 +2,5 @@ dist/
 test/db_data
 test/plugins
 test/wordpress
+vendor/
+composer.lock

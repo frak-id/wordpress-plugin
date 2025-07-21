@@ -11,8 +11,14 @@ if (!defined('ABSPATH')) {
     exit;
 }
 
+// Load Composer autoloader if it exists
+if (file_exists(plugin_dir_path(__FILE__) . 'vendor/autoload.php')) {
+    require_once plugin_dir_path(__FILE__) . 'vendor/autoload.php';
+}
+
 // Load the main plugin class
 require_once plugin_dir_path(__FILE__) . 'includes/class-frak-plugin.php';
+require_once plugin_dir_path(__FILE__) . 'includes/class-frak-webhook-helper.php';
 
 // Initialize the plugin
 function frak_init() {
