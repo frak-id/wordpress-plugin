@@ -44,6 +44,19 @@ jQuery(document).ready(function($) {
         $('#frak_show_reward, #frak_button_classname').prop('disabled', !enabled);
     }
     
+    // Autofill functionality
+    $('#autofill_app_name').on('click', function() {
+        if (frak_ajax.site_info.name) {
+            $('#frak_app_name').val(frak_ajax.site_info.name).trigger('input');
+        }
+    });
+
+    $('#autofill_logo_url').on('click', function() {
+        if (frak_ajax.site_info.logo_url) {
+            $('#frak_logo_url').val(frak_ajax.site_info.logo_url).trigger('input');
+        }
+    });
+    
     // Bind events
     $('#frak_app_name, #frak_logo_url').on('input', updateConfig);
     $('#frak_enable_floating_button').on('change', toggleFloatingButtonSettings);

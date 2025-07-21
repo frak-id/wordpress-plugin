@@ -15,6 +15,10 @@
                 <td>
                     <input type="text" id="frak_app_name" name="frak_app_name" 
                            value="<?php echo esc_attr($app_name); ?>" class="regular-text">
+                    <button type="button" id="autofill_app_name" class="button button-secondary" style="margin-left: 10px;">
+                        Use Site Name
+                    </button>
+                    <p class="description">Current site name: <strong><?php echo esc_html(get_bloginfo('name')); ?></strong></p>
                 </td>
             </tr>
             <tr>
@@ -24,6 +28,23 @@
                 <td>
                     <input type="url" id="frak_logo_url" name="frak_logo_url" 
                            value="<?php echo esc_url($logo_url); ?>" class="regular-text">
+                    <button type="button" id="autofill_logo_url" class="button button-secondary" style="margin-left: 10px;">
+                        Use Site Icon
+                    </button>
+                    <?php
+                    $site_icon_id = get_option('site_icon');
+                    $custom_logo_id = get_theme_mod('custom_logo');
+                    if ($site_icon_id || $custom_logo_id): ?>
+                        <p class="description">
+                            <?php if ($site_icon_id): ?>
+                                Site icon available
+                            <?php elseif ($custom_logo_id): ?>
+                                Custom logo available
+                            <?php endif; ?>
+                        </p>
+                    <?php else: ?>
+                        <p class="description">No site icon or custom logo found. <a href="<?php echo admin_url('customize.php'); ?>" target="_blank">Set one in Customizer</a></p>
+                    <?php endif; ?>
                 </td>
             </tr>
             <tr>
@@ -243,4 +264,3 @@
         <?php submit_button('Save Settings'); ?>
     </form>
 </div>
-

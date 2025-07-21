@@ -55,9 +55,27 @@ class Frak_Admin {
         
         wp_enqueue_code_editor(array('type' => 'text/javascript'));
         wp_enqueue_script('frak-admin', plugin_dir_url(dirname(__FILE__)) . 'admin/js/admin.js', array('jquery'), '1.0', true);
+        
+        // Get logo URL for autofill
+        $logo_url = '';
+        $site_icon_id = get_option('site_icon');
+        if ($site_icon_id) {
+            $logo_url = wp_get_attachment_image_url($site_icon_id, 'full');
+        }
+        if (!$logo_url) {
+            $custom_logo_id = get_theme_mod('custom_logo');
+            if ($custom_logo_id) {
+                $logo_url = wp_get_attachment_image_url($custom_logo_id, 'full');
+            }
+        }
+        
         wp_localize_script('frak-admin', 'frak_ajax', array(
             'ajax_url' => admin_url('admin-ajax.php'),
-            'nonce' => wp_create_nonce('frak_ajax_nonce')
+            'nonce' => wp_create_nonce('frak_ajax_nonce'),
+            'site_info' => array(
+                'name' => get_bloginfo('name'),
+                'logo_url' => $logo_url
+            )
         ));
         
         wp_add_inline_style('wp-admin', '
@@ -155,8 +173,12 @@ class Frak_Admin {
     }
 
     private function render_settings_page() {
-        $app_name = get_option('frak_app_name', 'Your App Name');
-        $logo_url = get_option('frak_logo_url', '');
+        // Get default values from WordPress site info
+        $default_app_name = get_bloginfo('name');
+        $default_logo_url = $this->get_site_icon_url();
+        
+        $app_name = get_option('frak_app_name', $default_app_name);
+        $logo_url = get_option('frak_logo_url', $default_logo_url);
         $custom_config = get_option('frak_custom_config', '');
         $enable_tracking = get_option('frak_enable_purchase_tracking', 0);
         $enable_button = get_option('frak_enable_floating_button', 0);
@@ -168,6 +190,27 @@ class Frak_Admin {
         }
         
         include FRAK_PLUGIN_DIR . 'admin/views/settings-page.php';
+    }
+
+    private function get_site_icon_url() {
+        $site_icon_id = get_option('site_icon');
+        if ($site_icon_id) {
+            $site_icon_url = wp_get_attachment_image_url($site_icon_id, 'full');
+            if ($site_icon_url) {
+                return $site_icon_url;
+            }
+        }
+        
+        // Fallback: try to get logo from theme customizer
+        $custom_logo_id = get_theme_mod('custom_logo');
+        if ($custom_logo_id) {
+            $custom_logo_url = wp_get_attachment_image_url($custom_logo_id, 'full');
+            if ($custom_logo_url) {
+                return $custom_logo_url;
+            }
+        }
+        
+        return '';
     }
 
     private function get_default_config($app_name, $logo_url) {
