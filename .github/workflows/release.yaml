@@ -13,19 +13,17 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Create plugin directory
-        run: |
-          mkdir -p frak-integration
-          cp frak-integration.php frak-integration/
+      - name: Make build script executable
+        run: chmod +x build.sh
           
-      - name: Create ZIP file
-        run: zip -r frak-integration.zip frak-integration
+      - name: Build plugin
+        run: ./build.sh
         
       - name: Create Release
         id: create_release
         uses: softprops/action-gh-release@v2
         with:
-          files: frak-integration.zip
+          files: dist/frak-integration-*.zip
           generate_release_notes: true
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

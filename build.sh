@@ -17,6 +17,7 @@ mkdir -p ${BUILD_DIR}/${PLUGIN_NAME} ${DIST_DIR}
 rsync -av --exclude-from='.distignore' \
   --exclude='build' \
   --exclude='dist' \
+  --exclude='test' \
   --exclude='.git' \
   --exclude='.gitignore' \
   --exclude='.distignore' \
