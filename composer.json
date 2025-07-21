@@ -1,0 +1,15 @@
+{
+    "name": "frak/wordpress-integration",
+    "description": "Frak WordPress Integration Plugin",
+    "type": "wordpress-plugin",
+    "require": {
+        "php": ">=7.2",
+        "kornrunner/keccak": "^1.1",
+        "simplito/elliptic-php": "^1.0"
+    },
+    "autoload": {
+        "psr-4": {
+            "Frak\\WordPress\\": "includes/"
+        }
+    }
+}

@@ -15,6 +15,12 @@ class Frak_Admin {
         add_action('admin_menu', array($this, 'add_admin_menu'));
         add_action('admin_init', array($this, 'register_settings'));
         add_action('admin_enqueue_scripts', array($this, 'enqueue_scripts'));
+        
+        // Add AJAX handlers for webhook operations
+        add_action('wp_ajax_frak_generate_webhook_secret', array($this, 'ajax_generate_webhook_secret'));
+        add_action('wp_ajax_frak_test_webhook', array($this, 'ajax_test_webhook'));
+        add_action('wp_ajax_frak_clear_webhook_logs', array($this, 'ajax_clear_webhook_logs'));
+        add_action('wp_ajax_frak_check_webhook_status', array($this, 'ajax_check_webhook_status'));
     }
 
     public function add_admin_menu() {
@@ -39,6 +45,7 @@ class Frak_Admin {
         register_setting('frak_settings', 'frak_enable_floating_button');
         register_setting('frak_settings', 'frak_show_reward');
         register_setting('frak_settings', 'frak_button_classname');
+        register_setting('frak_settings', 'frak_webhook_secret');
     }
 
     public function enqueue_scripts($hook) {
@@ -47,6 +54,29 @@ class Frak_Admin {
         }
         
         wp_enqueue_code_editor(array('type' => 'text/javascript'));
+        wp_enqueue_script('frak-admin', plugin_dir_url(dirname(__FILE__)) . 'admin/js/admin.js', array('jquery'), '1.0', true);
+        
+        // Get logo URL for autofill
+        $logo_url = '';
+        $site_icon_id = get_option('site_icon');
+        if ($site_icon_id) {
+            $logo_url = wp_get_attachment_image_url($site_icon_id, 'full');
+        }
+        if (!$logo_url) {
+            $custom_logo_id = get_theme_mod('custom_logo');
+            if ($custom_logo_id) {
+                $logo_url = wp_get_attachment_image_url($custom_logo_id, 'full');
+            }
+        }
+        
+        wp_localize_script('frak-admin', 'frak_ajax', array(
+            'ajax_url' => admin_url('admin-ajax.php'),
+            'nonce' => wp_create_nonce('frak_ajax_nonce'),
+            'site_info' => array(
+                'name' => get_bloginfo('name'),
+                'logo_url' => $logo_url
+            )
+        ));
         
         wp_add_inline_style('wp-admin', '
             .frak-links {
@@ -62,6 +92,51 @@ class Frak_Admin {
             }
             .frak-links a:hover {
                 text-decoration: underline;
+            }
+            .frak-webhook-status {
+                display: inline-block;
+                padding: 3px 8px;
+                border-radius: 3px;
+                font-size: 12px;
+                font-weight: 600;
+            }
+            .frak-webhook-status.status-active {
+                background: #d4edda;
+                color: #155724;
+            }
+            .frak-webhook-status.status-inactive {
+                background: #f8d7da;
+                color: #721c24;
+            }
+            .frak-stats-grid {
+                display: grid;
+                grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+                gap: 15px;
+                margin: 20px 0;
+            }
+            .frak-stat-box {
+                background: #fff;
+                border: 1px solid #ccd0d4;
+                padding: 15px;
+                text-align: center;
+            }
+            .frak-stat-box h3 {
+                margin: 0;
+                font-size: 24px;
+            }
+            .frak-stat-box p {
+                margin: 5px 0 0;
+                color: #666;
+            }
+            .frak-webhook-logs table {
+                margin-top: 20px;
+            }
+            .frak-webhook-section {
+                margin-top: 30px;
+                padding: 20px;
+                background: #fff;
+                border: 1px solid #ccd0d4;
+                box-shadow: 0 1px 1px rgba(0,0,0,.04);
             }
         ');
     }
@@ -179,5 +254,72 @@ window.FrakSetup = {
     },
 };
 JS;
+    }
+
+    // AJAX Handlers
+    public function ajax_generate_webhook_secret() {
+        check_ajax_referer('frak_ajax_nonce', 'nonce');
+        
+        if (!current_user_can('manage_options')) {
+            wp_die('Unauthorized');
+        }
+        
+        $secret = wp_generate_password(32, false);
+        update_option('frak_webhook_secret', $secret);
+        
+        wp_send_json_success(array(
+            'secret' => $secret,
+            'message' => __('Webhook secret generated successfully', 'frak')
+        ));
+    }
+    
+    public function ajax_test_webhook() {
+        check_ajax_referer('frak_ajax_nonce', 'nonce');
+        
+        if (!current_user_can('manage_options')) {
+            wp_die('Unauthorized');
+        }
+        
+        $result = Frak_Webhook_Helper::test_webhook();
+        
+        if ($result['success']) {
+            wp_send_json_success(array(
+                'message' => sprintf(__('Webhook test successful (%dms)', 'frak'), $result['execution_time']),
+                'details' => $result
+            ));
+        } else {
+            wp_send_json_error(array(
+                'message' => __('Webhook test failed: ', 'frak') . $result['error'],
+                'details' => $result
+            ));
+        }
+    }
+    
+    public function ajax_clear_webhook_logs() {
+        check_ajax_referer('frak_ajax_nonce', 'nonce');
+        
+        if (!current_user_can('manage_options')) {
+            wp_die('Unauthorized');
+        }
+        
+        Frak_Webhook_Helper::clear_webhook_logs();
+        
+        wp_send_json_success(array(
+            'message' => __('Webhook logs cleared successfully', 'frak')
+        ));
+    }
+    
+    public function ajax_check_webhook_status() {
+        check_ajax_referer('frak_ajax_nonce', 'nonce');
+        
+        if (!current_user_can('manage_options')) {
+            wp_die('Unauthorized');
+        }
+        
+        $status = Frak_Webhook_Helper::get_webhook_status();
+        
+        wp_send_json_success(array(
+            'status' => $status
+        ));
     }
 }
