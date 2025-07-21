@@ -55,6 +55,7 @@ class Frak_Admin {
         
         wp_enqueue_code_editor(array('type' => 'text/javascript'));
         wp_enqueue_script('frak-admin', plugin_dir_url(dirname(__FILE__)) . 'admin/js/admin.js', array('jquery'), '1.0', true);
+        wp_enqueue_style('frak-admin', plugin_dir_url(dirname(__FILE__)) . 'admin/css/admin.css', array(), '1.0');
         
         // Get logo URL for autofill
         $logo_url = '';
@@ -180,7 +181,14 @@ class Frak_Admin {
         $app_name = get_option('frak_app_name', $default_app_name);
         $logo_url = get_option('frak_logo_url', $default_logo_url);
         $custom_config = get_option('frak_custom_config', '');
-        $enable_tracking = get_option('frak_enable_purchase_tracking', 0);
+        // Auto-enable WooCommerce tracking if WooCommerce is active and setting hasn't been configured yet
+        $enable_tracking_option = get_option('frak_enable_purchase_tracking', null);
+        if ($enable_tracking_option === null && class_exists('WooCommerce')) {
+            $enable_tracking = 1;
+            update_option('frak_enable_purchase_tracking', 1);
+        } else {
+            $enable_tracking = get_option('frak_enable_purchase_tracking', 0);
+        }
         $enable_button = get_option('frak_enable_floating_button', 0);
         $show_reward = get_option('frak_show_reward', 0);
         $button_classname = get_option('frak_button_classname', '');
