@@ -204,6 +204,11 @@ class Frak_Admin {
         update_option('frak_floating_button_position', $floating_button_position);
         update_option('frak_modal_language', $modal_language);
         update_option('frak_modal_i18n', json_encode($modal_i18n));
+        
+        // Update config last modified timestamp for cache busting
+        if (class_exists('Frak_Config_Endpoint')) {
+            Frak_Config_Endpoint::update_last_modified();
+        }
 
     }
 

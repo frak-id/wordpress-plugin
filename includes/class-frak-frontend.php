@@ -17,21 +17,26 @@ class Frak_Frontend {
     }
 
     public function enqueue_scripts() {
-        // Load the configuration
-        $custom_config = get_option('frak_custom_config', '');
+        // Check if we have a configuration
+        $has_config = !empty(get_option('frak_custom_config', '')) || 
+                      !empty(get_option('frak_app_name', ''));
         
-        if (!empty($custom_config)) {
-            // Inject the configuration inline instead of using a separate file
-            wp_register_script('frak-config', false);
-            wp_enqueue_script('frak-config');
-            wp_add_inline_script('frak-config', $custom_config, 'before');
+        if ($has_config) {
+            // Load configuration from endpoint with cache busting
+            wp_enqueue_script(
+                'frak-config',
+                Frak_Config_Endpoint::get_config_url(),
+                array(),
+                null,
+                false // Load in head for early initialization
+            );
         }
         
         // Load the Frak SDK
         wp_enqueue_script(
             'frak-sdk',
             'https://cdn.jsdelivr.net/npm/@frak-labs/components@latest/cdn/components.js',
-            array('frak-config'),
+            $has_config ? array('frak-config') : array(),
             null,
             array('strategy' => 'defer')
         );
