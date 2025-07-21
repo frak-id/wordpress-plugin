@@ -15,6 +15,10 @@
                 <td>
                     <input type="text" id="frak_app_name" name="frak_app_name" 
                            value="<?php echo esc_attr($app_name); ?>" class="regular-text">
+                    <button type="button" id="autofill_app_name" class="button button-secondary" style="margin-left: 10px;">
+                        Use Site Name
+                    </button>
+                    <p class="description">Current site name: <strong><?php echo esc_html(get_bloginfo('name')); ?></strong></p>
                 </td>
             </tr>
             <tr>
@@ -24,6 +28,23 @@
                 <td>
                     <input type="url" id="frak_logo_url" name="frak_logo_url" 
                            value="<?php echo esc_url($logo_url); ?>" class="regular-text">
+                    <button type="button" id="autofill_logo_url" class="button button-secondary" style="margin-left: 10px;">
+                        Use Site Icon
+                    </button>
+                    <?php
+                    $site_icon_id = get_option('site_icon');
+                    $custom_logo_id = get_theme_mod('custom_logo');
+                    if ($site_icon_id || $custom_logo_id): ?>
+                        <p class="description">
+                            <?php if ($site_icon_id): ?>
+                                Site icon available
+                            <?php elseif ($custom_logo_id): ?>
+                                Custom logo available
+                            <?php endif; ?>
+                        </p>
+                    <?php else: ?>
+                        <p class="description">No site icon or custom logo found. <a href="<?php echo admin_url('customize.php'); ?>" target="_blank">Set one in Customizer</a></p>
+                    <?php endif; ?>
                 </td>
             </tr>
             <tr>
@@ -114,6 +135,25 @@ jQuery(document).ready(function($) {
         }
     });
 
+    // WordPress site information for autofill
+    var wpSiteInfo = {
+        name: <?php echo json_encode(get_bloginfo('name')); ?>,
+        logoUrl: <?php 
+            $site_icon_id = get_option('site_icon');
+            $logo_url = '';
+            if ($site_icon_id) {
+                $logo_url = wp_get_attachment_image_url($site_icon_id, 'full');
+            }
+            if (!$logo_url) {
+                $custom_logo_id = get_theme_mod('custom_logo');
+                if ($custom_logo_id) {
+                    $logo_url = wp_get_attachment_image_url($custom_logo_id, 'full');
+                }
+            }
+            echo json_encode($logo_url ?: '');
+        ?>
+    };
+
     function updateConfig() {
         var appName = $('#frak_app_name').val();
         var logoUrl = $('#frak_logo_url').val();
@@ -136,6 +176,19 @@ jQuery(document).ready(function($) {
         var enabled = $('#frak_enable_floating_button').is(':checked');
         $('#frak_show_reward, #frak_button_classname').prop('disabled', !enabled);
     }
+
+    // Autofill functionality
+    $('#autofill_app_name').on('click', function() {
+        if (wpSiteInfo.name) {
+            $('#frak_app_name').val(wpSiteInfo.name).trigger('input');
+        }
+    });
+
+    $('#autofill_logo_url').on('click', function() {
+        if (wpSiteInfo.logoUrl) {
+            $('#frak_logo_url').val(wpSiteInfo.logoUrl).trigger('input');
+        }
+    });
 
     $('#frak_app_name, #frak_logo_url').on('input', updateConfig);
     $('#frak_enable_floating_button').on('change', toggleFloatingButtonSettings);
