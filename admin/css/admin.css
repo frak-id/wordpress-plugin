@@ -142,6 +142,55 @@
     margin-left: 5px;
 }
 
+/* i18n table styling */
+.frak-i18n-table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+.frak-i18n-table td {
+    padding: 8px 10px 8px 0;
+    vertical-align: middle;
+}
+
+.frak-i18n-table td:first-child {
+    width: 150px;
+    font-weight: 600;
+    color: #23282d;
+}
+
+.frak-i18n-table input {
+    width: 100%;
+}
+
+/* Logo preview */
+.frak-logo-preview {
+    margin-top: 10px;
+    padding: 10px;
+    background: #f0f0f1;
+    border: 1px solid #ddd;
+    border-radius: 3px;
+    display: inline-block;
+}
+
+.frak-logo-preview img {
+    display: block;
+    max-height: 80px;
+    max-width: 200px;
+    height: auto;
+    width: auto;
+}
+
+/* File input styling */
+input[type="file"] {
+    padding: 3px;
+}
+
+/* Select styling consistency */
+select {
+    min-width: 150px;
+}
+
 /* Responsive adjustments */
 @media screen and (max-width: 782px) {
     .frak-section .form-table th,
@@ -151,5 +200,16 @@
     
     .frak-stats-grid {
         grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+    }
+    
+    .frak-i18n-table td:first-child {
+        width: auto;
+        display: block;
+        margin-bottom: 5px;
+    }
+    
+    .frak-i18n-table td {
+        display: block;
+        padding: 5px 0;
     }
 }

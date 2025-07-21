@@ -6,7 +6,7 @@
         <a href="https://business.frak.id/" target="_blank">🎯 Dashboard</a>
     </div>
 
-    <form method="post" action="">
+    <form method="post" action="" enctype="multipart/form-data">
         <!-- Generic Website Info Section -->
         <div class="frak-section">
             <h2>Website Information</h2>
@@ -50,6 +50,20 @@
                         <?php endif; ?>
                     </td>
                 </tr>
+                <tr>
+                    <th scope="row">
+                        <label for="frak_logo_file">Upload Logo</label>
+                    </th>
+                    <td>
+                        <input type="file" id="frak_logo_file" name="frak_logo_file" accept="image/*">
+                        <p class="description">Upload a logo image (JPG, PNG, GIF, SVG - Max 2MB)</p>
+                        <?php if ($logo_url): ?>
+                            <div class="frak-logo-preview" style="margin-top: 10px;">
+                                <img src="<?php echo esc_url($logo_url); ?>" alt="Current logo" style="max-height: 80px; max-width: 200px;">
+                            </div>
+                        <?php endif; ?>
+                    </td>
+                </tr>
             </table>
         </div>
         
@@ -90,6 +104,18 @@
                     </tr>
                     <tr>
                         <th scope="row">
+                            <label for="frak_floating_button_position">Button Position</label>
+                        </th>
+                        <td>
+                            <select id="frak_floating_button_position" name="frak_floating_button_position"
+                                    <?php echo $enable_button ? '' : 'disabled'; ?>>
+                                <option value="right" <?php selected($floating_button_position, 'right'); ?>>Right</option>
+                                <option value="left" <?php selected($floating_button_position, 'left'); ?>>Left</option>
+                            </select>
+                        </td>
+                    </tr>
+                    <tr>
+                        <th scope="row">
                             <label for="frak_button_classname">Custom Class Name</label>
                         </th>
                         <td>
@@ -101,10 +127,60 @@
                             <p class="description">Add custom CSS classes to the button</p>
                         </td>
                     </tr>
+                </table>
+            </div>
+            
+            <!-- Modal Customization Subsection -->
+            <div class="frak-subsection">
+                <h3>Modal Customization</h3>
+                <table class="form-table">
                     <tr>
-                        <th scope="row">Button Position</th>
+                        <th scope="row">
+                            <label for="frak_modal_language">Modal Language</label>
+                        </th>
                         <td>
-                            <p class="description">The button position is controlled by the <code>modalWalletConfig.metadata.position</code> setting in the advanced configuration below. It can be set to either "left" or "right".</p>
+                            <select id="frak_modal_language" name="frak_modal_language">
+                                <option value="default" <?php selected($modal_language, 'default'); ?>>Default</option>
+                                <option value="en" <?php selected($modal_language, 'en'); ?>>English</option>
+                                <option value="fr" <?php selected($modal_language, 'fr'); ?>>Français</option>
+                            </select>
+                            <p class="description">Default language for the Frak modal</p>
+                        </td>
+                    </tr>
+                    <tr>
+                        <th scope="row">Custom Translations</th>
+                        <td>
+                            <p class="description" style="margin-bottom: 10px;">Override default text in the modal (leave empty to use defaults)</p>
+                            <table class="frak-i18n-table">
+                                <tr>
+                                    <td><label for="frak_modal_i18n_login_text">Login Text:</label></td>
+                                    <td><input type="text" id="frak_modal_i18n_login_text" 
+                                               name="frak_modal_i18n[sdk.wallet.login.text]" 
+                                               value="<?php echo isset($modal_i18n['sdk.wallet.login.text']) ? esc_attr($modal_i18n['sdk.wallet.login.text']) : ''; ?>" 
+                                               class="regular-text"></td>
+                                </tr>
+                                <tr>
+                                    <td><label for="frak_modal_i18n_login_text_sharing">Sharing Login Text:</label></td>
+                                    <td><input type="text" id="frak_modal_i18n_login_text_sharing" 
+                                               name="frak_modal_i18n[sdk.wallet.login.text_sharing]" 
+                                               value="<?php echo isset($modal_i18n['sdk.wallet.login.text_sharing']) ? esc_attr($modal_i18n['sdk.wallet.login.text_sharing']) : ''; ?>" 
+                                               class="regular-text"></td>
+                                </tr>
+                                <tr>
+                                    <td><label for="frak_modal_i18n_login_cta">Login Button:</label></td>
+                                    <td><input type="text" id="frak_modal_i18n_login_cta" 
+                                               name="frak_modal_i18n[sdk.wallet.login.cta]" 
+                                               value="<?php echo isset($modal_i18n['sdk.wallet.login.cta']) ? esc_attr($modal_i18n['sdk.wallet.login.cta']) : ''; ?>" 
+                                               class="regular-text"></td>
+                                </tr>
+                                <tr>
+                                    <td><label for="frak_modal_i18n_reward_text">Reward Text:</label></td>
+                                    <td><input type="text" id="frak_modal_i18n_reward_text" 
+                                               name="frak_modal_i18n[sdk.wallet.reward.text]" 
+                                               value="<?php echo isset($modal_i18n['sdk.wallet.reward.text']) ? esc_attr($modal_i18n['sdk.wallet.reward.text']) : ''; ?>" 
+                                               class="regular-text"></td>
+                                </tr>
+                            </table>
                         </td>
                     </tr>
                 </table>

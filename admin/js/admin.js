@@ -23,16 +23,41 @@ jQuery(document).ready(function($) {
         
         var appName = $('#frak_app_name').val();
         var logoUrl = $('#frak_logo_url').val();
+        var position = $('#frak_floating_button_position').val();
+        var modalLang = $('#frak_modal_language').val();
         var currentConfig = editor.codemirror.getValue();
         
+        // Update app name
         currentConfig = currentConfig.replace(
             /(metadata:\s*{\s*name:\s*")[^"]*(")/,
             '$1' + appName + '$2'
         );
         
+        // Update logo URL
         currentConfig = currentConfig.replace(
             /(logoUrl:\s*")[^"]*(")/,
             '$1' + logoUrl + '$2'
+        );
+        
+        // Update language - handle both string and variable format
+        if (modalLang === 'default') {
+            // Replace with undefined (variable)
+            currentConfig = currentConfig.replace(
+                /(const lang = )[^;]+/,
+                '$1undefined'
+            );
+        } else {
+            // Replace with quoted string
+            currentConfig = currentConfig.replace(
+                /(const lang = )[^;]+/,
+                "$1'" + modalLang + "'"
+            );
+        }
+        
+        // Update floating button position
+        currentConfig = currentConfig.replace(
+            /(modalWalletConfig:\s*{[\s\S]*?metadata:\s*{[\s\S]*?position:\s*")[^"]*(")/,
+            '$1' + position + '$2'
         );
         
         editor.codemirror.setValue(currentConfig);
@@ -41,7 +66,41 @@ jQuery(document).ready(function($) {
     // Toggle floating button settings
     function toggleFloatingButtonSettings() {
         var enabled = $('#frak_enable_floating_button').is(':checked');
-        $('#frak_show_reward, #frak_button_classname').prop('disabled', !enabled);
+        $('#frak_show_reward, #frak_button_classname, #frak_floating_button_position').prop('disabled', !enabled);
+    }
+    
+    // Logo file preview
+    function handleLogoFileSelect(e) {
+        var file = e.target.files[0];
+        if (file && file.type.match('image.*')) {
+            var reader = new FileReader();
+            reader.onload = function(e) {
+                updateLogoPreview(e.target.result);
+                // Update the URL field to indicate a file was selected
+                $('#frak_logo_url').val('').attr('placeholder', 'File selected: ' + file.name);
+            };
+            reader.readAsDataURL(file);
+        }
+    }
+    
+    // Update logo preview
+    function updateLogoPreview(src) {
+        var $preview = $('.frak-logo-preview');
+        if ($preview.length === 0) {
+            $preview = $('<div class="frak-logo-preview" style="margin-top: 10px;"><img alt="Logo preview" style="max-height: 80px; max-width: 200px;"></div>');
+            $('#frak_logo_file').closest('td').append($preview);
+        }
+        $preview.find('img').attr('src', src);
+    }
+    
+    // Handle logo URL changes
+    function handleLogoUrlChange() {
+        var url = $(this).val();
+        if (url) {
+            updateLogoPreview(url);
+            // Clear file input if URL is entered
+            $('#frak_logo_file').val('');
+        }
     }
     
     // Autofill functionality
@@ -58,8 +117,12 @@ jQuery(document).ready(function($) {
     });
     
     // Bind events
-    $('#frak_app_name, #frak_logo_url').on('input', updateConfig);
+    $('#frak_app_name, #frak_logo_url, #frak_floating_button_position, #frak_modal_language').on('input change', updateConfig);
     $('#frak_enable_floating_button').on('change', toggleFloatingButtonSettings);
+    $('#frak_logo_file').on('change', handleLogoFileSelect);
+    $('#frak_logo_url').on('input', handleLogoUrlChange);
+    
+    // Initialize toggles
     toggleFloatingButtonSettings();
 
     // Generate webhook secret
@@ -193,5 +256,11 @@ jQuery(document).ready(function($) {
                 $(this).remove();
             });
         }, 5000);
+    }
+    
+    // Initialize logo preview if logo URL exists
+    var existingLogoUrl = $('#frak_logo_url').val();
+    if (existingLogoUrl) {
+        updateLogoPreview(existingLogoUrl);
     }
 });

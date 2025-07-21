@@ -45,6 +45,18 @@ class Frak_Admin {
         register_setting('frak_settings', 'frak_enable_floating_button');
         register_setting('frak_settings', 'frak_show_reward');
         register_setting('frak_settings', 'frak_button_classname');
+        register_setting('frak_settings', 'frak_floating_button_position');
+        register_setting('frak_settings', 'frak_modal_language');
+        register_setting('frak_settings', 'frak_modal_i18n', array(
+            'sanitize_callback' => function($input) {
+                if (is_array($input)) {
+                    return json_encode(array_filter($input, function($value) {
+                        return $value !== '';
+                    }));
+                }
+                return $input;
+            }
+        ));
         register_setting('frak_settings', 'frak_webhook_secret');
     }
 
@@ -156,12 +168,31 @@ class Frak_Admin {
 
     private function save_settings() {
         $app_name = sanitize_text_field($_POST['frak_app_name']);
+        
+        // Handle file upload if present
         $logo_url = esc_url_raw($_POST['frak_logo_url']);
+        if (!empty($_FILES['frak_logo_file']) && $_FILES['frak_logo_file']['error'] == UPLOAD_ERR_OK) {
+            $uploaded_logo = $this->handle_logo_upload($_FILES['frak_logo_file']);
+            if ($uploaded_logo) {
+                $logo_url = $uploaded_logo;
+            }
+        }
+        
         $custom_config = stripslashes($_POST['frak_custom_config']);
         $enable_tracking = isset($_POST['frak_enable_purchase_tracking']) ? 1 : 0;
         $enable_button = isset($_POST['frak_enable_floating_button']) ? 1 : 0;
         $show_reward = isset($_POST['frak_show_reward']) ? 1 : 0;
         $button_classname = isset($_POST['frak_button_classname']) ? sanitize_text_field($_POST['frak_button_classname']) : '';
+        $floating_button_position = isset($_POST['frak_floating_button_position']) ? sanitize_text_field($_POST['frak_floating_button_position']) : 'right';
+        $modal_language = isset($_POST['frak_modal_language']) ? sanitize_text_field($_POST['frak_modal_language']) : 'en';
+        
+        // Handle modal i18n
+        $modal_i18n = isset($_POST['frak_modal_i18n']) ? $_POST['frak_modal_i18n'] : array();
+        if (is_array($modal_i18n)) {
+            $modal_i18n = array_filter($modal_i18n, function($value) {
+                return $value !== '';
+            });
+        }
 
         update_option('frak_app_name', $app_name);
         update_option('frak_logo_url', $logo_url);
@@ -170,6 +201,9 @@ class Frak_Admin {
         update_option('frak_enable_floating_button', $enable_button);
         update_option('frak_show_reward', $show_reward);
         update_option('frak_button_classname', $button_classname);
+        update_option('frak_floating_button_position', $floating_button_position);
+        update_option('frak_modal_language', $modal_language);
+        update_option('frak_modal_i18n', json_encode($modal_i18n));
 
     }
 
@@ -192,6 +226,9 @@ class Frak_Admin {
         $enable_button = get_option('frak_enable_floating_button', 0);
         $show_reward = get_option('frak_show_reward', 0);
         $button_classname = get_option('frak_button_classname', '');
+        $floating_button_position = get_option('frak_floating_button_position', 'right');
+        $modal_language = get_option('frak_modal_language', 'default');
+        $modal_i18n = json_decode(get_option('frak_modal_i18n', '{}'), true);
         
         if (empty($custom_config)) {
             $custom_config = $this->get_default_config($app_name, $logo_url);
@@ -222,46 +259,92 @@ class Frak_Admin {
     }
 
     private function get_default_config($app_name, $logo_url) {
+        $modal_language = get_option('frak_modal_language', 'default');
+        $floating_button_position = get_option('frak_floating_button_position', 'right');
+        $modal_i18n = get_option('frak_modal_i18n', '{}');
+        
+        // Handle language setting
+        $lang_code = $modal_language === 'default' ? 'undefined' : "'{$modal_language}'";
+        
         return <<<JS
+let logoUrl = '{$logo_url}';
+const lang = {$lang_code};
+
+let i18n = {};
+try {
+    i18n = JSON.parse('{$modal_i18n}'.replace(
+        /&amp;|&lt;|&gt;|&#39;|&quot;/g,
+        tag =>
+          ({
+            '&amp;': '&',
+            '&lt;': '<',
+            '&gt;': '>',
+            '&#39;': "'",
+            '&quot;': '"'
+          }[tag] || tag)
+    )) || {};
+} catch (error) {
+    console.error('Error parsing i18n customizations:', error);
+}
+
 window.FrakSetup = {
-    config: {
-        metadata: {
-            name: "{$app_name}",
-            lang: "en",
-            currency: "eur",
-            logoUrl: "{$logo_url}",
-            homepageLink: window.location.origin,
-        },
-        customizations: {},
-        domain: window.location.host,
+    config: { 
+        walletUrl: 'https://wallet.frak.id', 
+        metadata: { 
+            name: '{$app_name}', 
+            lang, 
+            logoUrl 
+        }, 
+        customizations: { i18n }, 
+        domain: window.location.host 
     },
-    modalConfig: {
-        login: {
-            allowSso: true,
-            ssoMetadata: {},
-        },
-        metadata: {
-            isDismissible: true,
-        },
+    modalConfig: { 
+        login: { 
+            allowSso: true, 
+            ssoMetadata: { 
+                logoUrl, 
+                homepageLink: window.location.host 
+            } 
+        } 
     },
-    modalShareConfig: {
-        link: window.location.href,
-    },  
-    modalWalletConfig: {
-        metadata: {
-            position: "left",
-        },
-        loggedIn: {
-            action: {
-                key: "sharing",
-                options: {
-                    link: window.location.href,
-                },
-            },
-        },
+    modalShareConfig: { 
+        link: window.location.href 
+    },
+    modalWalletConfig: { 
+        metadata: { 
+            position: '{$floating_button_position}' 
+        } 
     },
 };
 JS;
+    }
+
+    private function handle_logo_upload($file) {
+        // Check file type
+        $allowed_types = array('image/jpeg', 'image/png', 'image/gif', 'image/svg+xml');
+        if (!in_array($file['type'], $allowed_types)) {
+            return false;
+        }
+        
+        // Check file size (2MB max)
+        if ($file['size'] > 2 * 1024 * 1024) {
+            return false;
+        }
+        
+        // Use WordPress media upload handler
+        if (!function_exists('wp_handle_upload')) {
+            require_once(ABSPATH . 'wp-admin/includes/file.php');
+        }
+        
+        $upload_overrides = array('test_form' => false);
+        $movefile = wp_handle_upload($file, $upload_overrides);
+        
+        if ($movefile && !isset($movefile['error'])) {
+            // Upload successful
+            return $movefile['url'];
+        }
+        
+        return false;
     }
 
     // AJAX Handlers
