@@ -27,15 +27,26 @@ jQuery(document).ready(function($) {
         var modalLang = $('#frak_modal_language').val();
         var currentConfig = editor.codemirror.getValue();
         
+        // Collect i18n values
+        var i18nValues = {};
+        $('.frak-i18n-table input').each(function() {
+            var $input = $(this);
+            var key = $input.attr('name').replace('frak_modal_i18n[', '').replace(']', '');
+            var value = $input.val();
+            if (value) {
+                i18nValues[key] = value;
+            }
+        });
+        
         // Update app name
         currentConfig = currentConfig.replace(
             /(metadata:\s*{\s*name:\s*")[^"]*(")/,
             '$1' + appName + '$2'
         );
         
-        // Update logo URL
+        // Update logo URL - both in let declaration and in objects
         currentConfig = currentConfig.replace(
-            /(logoUrl:\s*")[^"]*(")/,
+            /(let logoUrl = ')[^']*(')/,
             '$1' + logoUrl + '$2'
         );
         
@@ -52,6 +63,18 @@ jQuery(document).ready(function($) {
                 /(const lang = )[^;]+/,
                 "$1'" + modalLang + "'"
             );
+        }
+        
+        // Update i18n object
+        var i18nJson = JSON.stringify(i18nValues, null, 0);
+        // Find the i18n parsing section and update it
+        var i18nMatch = currentConfig.match(/let i18n = {};\s*try {[\s\S]*?} catch/);
+        if (i18nMatch) {
+            // Replace the entire i18n section
+            var newI18nSection = "let i18n = {};\ntry {\n    i18n = JSON.parse('" + 
+                i18nJson.replace(/'/g, "\\'") + 
+                "'.replace(\n        /&amp;|&lt;|&gt;|&#39;|&quot;/g,\n        tag =>\n          ({\n            '&amp;': '&',\n            '&lt;': '<',\n            '&gt;': '>',\n            '&#39;': \"'\",\n            '&quot;': '"'\n          }[tag] || tag)\n    )) || {};\n} catch";
+            currentConfig = currentConfig.replace(/let i18n = {};\s*try {[\s\S]*?} catch/, newI18nSection);
         }
         
         // Update floating button position
@@ -121,6 +144,9 @@ jQuery(document).ready(function($) {
     $('#frak_enable_floating_button').on('change', toggleFloatingButtonSettings);
     $('#frak_logo_file').on('change', handleLogoFileSelect);
     $('#frak_logo_url').on('input', handleLogoUrlChange);
+    
+    // Bind i18n input events
+    $('.frak-i18n-table input').on('input', updateConfig);
     
     // Initialize toggles
     toggleFloatingButtonSettings();
