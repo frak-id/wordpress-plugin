@@ -151,51 +151,92 @@
                         <th scope="row">Custom Translations</th>
                         <td>
                             <p class="description" style="margin-bottom: 10px;">Override default text in the modal (leave empty to use defaults)</p>
-                            <table class="frak-i18n-table">
-                                <tr>
-                                    <td><label for="frak_modal_i18n_login_text">Login Text:</label></td>
-                                    <td><input type="text" id="frak_modal_i18n_login_text" 
-                                               name="frak_modal_i18n[sdk.wallet.login.text]" 
-                                               value="<?php echo isset($modal_i18n['sdk.wallet.login.text']) ? esc_attr($modal_i18n['sdk.wallet.login.text']) : ''; ?>" 
-                                               class="regular-text"></td>
-                                </tr>
-                                <tr>
-                                    <td><label for="frak_modal_i18n_login_text_sharing">Sharing Login Text:</label></td>
-                                    <td><input type="text" id="frak_modal_i18n_login_text_sharing" 
-                                               name="frak_modal_i18n[sdk.wallet.login.text_sharing]" 
-                                               value="<?php echo isset($modal_i18n['sdk.wallet.login.text_sharing']) ? esc_attr($modal_i18n['sdk.wallet.login.text_sharing']) : ''; ?>" 
-                                               class="regular-text"></td>
-                                </tr>
-                                <tr>
-                                    <td><label for="frak_modal_i18n_login_cta">Login Button:</label></td>
-                                    <td><input type="text" id="frak_modal_i18n_login_cta" 
-                                               name="frak_modal_i18n[sdk.wallet.login.cta]" 
-                                               value="<?php echo isset($modal_i18n['sdk.wallet.login.cta']) ? esc_attr($modal_i18n['sdk.wallet.login.cta']) : ''; ?>" 
-                                               class="regular-text"></td>
-                                </tr>
-                                <tr>
-                                    <td><label for="frak_modal_i18n_reward_text">Reward Text:</label></td>
-                                    <td><input type="text" id="frak_modal_i18n_reward_text" 
-                                               name="frak_modal_i18n[sdk.wallet.reward.text]" 
-                                               value="<?php echo isset($modal_i18n['sdk.wallet.reward.text']) ? esc_attr($modal_i18n['sdk.wallet.reward.text']) : ''; ?>" 
-                                               class="regular-text"></td>
-                                </tr>
-                            </table>
+                            
+                            <!-- Sharing Modal Customization -->
+                            <div class="frak-i18n-group">
+                                <h4 style="margin: 15px 0 10px 0;">Sharing Modal</h4>
+                                <table class="frak-i18n-table">
+                                    <tr>
+                                        <td style="vertical-align: top; padding-bottom: 15px;">
+                                            <label for="frak_modal_i18n_sharing_title">Sharing Modal Title:</label>
+                                            <p class="description" style="margin-top: 5px;">The title that appears when users share your content on social media or messaging apps</p>
+                                        </td>
+                                        <td style="padding-bottom: 15px;">
+                                            <input type="text" id="frak_modal_i18n_sharing_title" 
+                                                   name="frak_modal_i18n[sharing.title]" 
+                                                   value="<?php echo isset($modal_i18n['sharing.title']) ? esc_attr($modal_i18n['sharing.title']) : ''; ?>" 
+                                                   class="large-text"
+                                                   placeholder="Example: 'Share this amazing product with your friends!'">
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <td style="vertical-align: top; padding-bottom: 15px;">
+                                            <label for="frak_modal_i18n_sharing_text">Sharing Message Text:</label>
+                                            <p class="description" style="margin-top: 5px;">The default message that will be shared along with your product link</p>
+                                        </td>
+                                        <td style="padding-bottom: 15px;">
+                                            <textarea id="frak_modal_i18n_sharing_text" 
+                                                      name="frak_modal_i18n[sharing.text]" 
+                                                      class="large-text" 
+                                                      rows="3"
+                                                      placeholder="Example: 'Check out this amazing product I found!'"><?php echo isset($modal_i18n['sharing.text']) ? esc_textarea($modal_i18n['sharing.text']) : ''; ?></textarea>
+                                        </td>
+                                    </tr>
+                                </table>
+                            </div>
+                            
+                            <!-- Wallet Login Modal Customization -->
+                            <div class="frak-i18n-group">
+                                <h4 style="margin: 15px 0 10px 0;">Wallet Login Modal</h4>
+                                <table class="frak-i18n-table">
+                                    <tr>
+                                        <td style="vertical-align: top; padding-bottom: 15px;">
+                                            <label for="frak_modal_i18n_login_primary_action">Wallet Login Button Text:</label>
+                                            <p class="description" style="margin-top: 5px;">The text displayed on the main action button in the wallet login modal</p>
+                                        </td>
+                                        <td style="padding-bottom: 15px;">
+                                            <input type="text" id="frak_modal_i18n_login_primary_action" 
+                                                   name="frak_modal_i18n[sdk.wallet.login.primaryAction]" 
+                                                   value="<?php echo isset($modal_i18n['sdk.wallet.login.primaryAction']) ? esc_attr($modal_i18n['sdk.wallet.login.primaryAction']) : ''; ?>" 
+                                                   class="large-text"
+                                                   placeholder="Example: 'Create your wallet in 2 seconds!'">
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <td style="vertical-align: top; padding-bottom: 15px;">
+                                            <label for="frak_modal_i18n_login_text_sharing">Login Text for Sharing:</label>
+                                            <p class="description" style="margin-top: 5px;">Message shown to users when they need to login to share content and earn rewards.<br>
+                                            You can use <strong>**bold text**</strong>, <em>*italic text*</em>, and <code>{{ estimatedReward }}</code> to show the reward amount.</p>
+                                        </td>
+                                        <td style="padding-bottom: 15px;">
+                                            <textarea id="frak_modal_i18n_login_text_sharing" 
+                                                      name="frak_modal_i18n[sdk.wallet.login.text_sharing]" 
+                                                      class="large-text" 
+                                                      rows="3"
+                                                      placeholder="Example: 'Share, Refer, Earn up to **{{ estimatedReward }}** per successful referral'"><?php echo isset($modal_i18n['sdk.wallet.login.text_sharing']) ? esc_textarea($modal_i18n['sdk.wallet.login.text_sharing']) : ''; ?></textarea>
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <td style="vertical-align: top; padding-bottom: 15px;">
+                                            <label for="frak_modal_i18n_login_text_referred">Welcome Text for Referred Users:</label>
+                                            <p class="description" style="margin-top: 5px;">Message shown to users who clicked on a shared link.<br>
+                                            You can use <strong>**bold text**</strong>, <em>*italic text*</em>, and <code>{{ estimatedReward }}</code> to show the reward amount.</p>
+                                        </td>
+                                        <td style="padding-bottom: 15px;">
+                                            <textarea id="frak_modal_i18n_login_text_referred" 
+                                                      name="frak_modal_i18n[sdk.wallet.login.text_referred]" 
+                                                      class="large-text" 
+                                                      rows="3"
+                                                      placeholder="Example: 'Welcome! Receive **{{ estimatedReward }}** when you make a purchase'"><?php echo isset($modal_i18n['sdk.wallet.login.text_referred']) ? esc_textarea($modal_i18n['sdk.wallet.login.text_referred']) : ''; ?></textarea>
+                                        </td>
+                                    </tr>
+                                </table>
+                            </div>
                         </td>
                     </tr>
                 </table>
             </div>
         </div>
-        
-        <!-- Advanced Configuration Section -->
-        <div class="frak-section">
-            <h2>Advanced Configuration</h2>
-            <p>Customize your Frak configuration below:</p>
-            <textarea id="frak_custom_config" name="frak_custom_config" 
-                      style="width: 100%; height: 400px; font-family: monospace;"
-            ><?php echo $custom_config; ?></textarea>
-        </div>
-        
         <!-- Purchase Tracking Section -->
         <div class="frak-section">
             <h2>Purchase Tracking</h2>

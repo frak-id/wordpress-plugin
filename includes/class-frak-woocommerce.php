@@ -14,10 +14,8 @@ class Frak_WooCommerce {
     private function __construct() {
         add_action('woocommerce_thankyou', array($this, 'track_purchase'));
         
-        // Add webhook handlers for order status changes
-        add_action('woocommerce_order_status_completed', array($this, 'send_order_webhook'));
-        add_action('woocommerce_order_status_processing', array($this, 'send_order_webhook'));
-        add_action('woocommerce_payment_complete', array($this, 'send_order_webhook'));
+        // Add webhook handler for all order status changes
+        add_action('woocommerce_order_status_changed', array($this, 'handle_order_status_change'), 10, 4);
     }
 
     public function track_purchase($order_id) {
@@ -71,35 +69,60 @@ class Frak_WooCommerce {
     }
     
     /**
-     * Send webhook when order status changes
+     * Handle order status changes
      *
-     * @param int $order_id Order ID.
+     * @param int    $order_id Order ID.
+     * @param string $old_status Old status.
+     * @param string $new_status New status.
+     * @param object $order Order object.
      */
-    public function send_order_webhook($order_id) {
+    public function handle_order_status_change($order_id, $old_status, $new_status, $order) {
         // Check if webhook secret is configured
         $webhook_secret = get_option('frak_webhook_secret');
         if (empty($webhook_secret)) {
             return;
         }
         
-        // Get order
-        $order = wc_get_order($order_id);
-        if (!$order) {
+        // Define status mapping (WooCommerce status => Frak status)
+        $status_map = array(
+            'completed'  => 'confirmed',
+            'processing' => 'pending',
+            'on-hold'    => 'pending',
+            'pending'    => 'pending',
+            'cancelled'  => 'cancelled',
+            'refunded'   => 'refunded',
+            'failed'     => 'cancelled',
+        );
+        
+        // Define statuses to skip
+        $skip_statuses = array(
+            'checkout-draft', // Draft orders during checkout
+            'auto-draft',     // Auto-draft orders
+        );
+        
+        // Skip if status is in skip list
+        if (in_array($new_status, $skip_statuses)) {
+            $order->add_order_note(sprintf(__('Frak: Skipping webhook for status: %s', 'frak'), $new_status));
             return;
         }
         
-        // Get order status and token
-        $status = $order->get_status();
+        // Map the status, default to 'pending' if not mapped
+        $webhook_status = isset($status_map[$new_status]) ? $status_map[$new_status] : 'pending';
+        
+        // Get order token
         $token = $order->get_order_key();
         
+        // Log the webhook attempt
+        $order->add_order_note(sprintf(__('Frak: Sending webhook with status: %s', 'frak'), $webhook_status));
+        
         // Send webhook
-        $result = Frak_Webhook_Helper::send($order_id, $status, $token);
+        $result = Frak_Webhook_Helper::send($order_id, $webhook_status, $token);
         
         // Log result
         if ($result['success']) {
-            $order->add_order_note(__('Frak webhook sent successfully', 'frak'));
+            $order->add_order_note(__('Frak: Webhook sent successfully', 'frak'));
         } else {
-            $order->add_order_note(sprintf(__('Frak webhook failed: %s', 'frak'), $result['error']));
+            $order->add_order_note(sprintf(__('Frak: Webhook failed: %s', 'frak'), $result['error']));
         }
     }
 }
