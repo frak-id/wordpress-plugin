@@ -183,9 +183,25 @@ class Frak_Admin {
         // Handle modal i18n
         $modal_i18n = isset($_POST['frak_modal_i18n']) ? $_POST['frak_modal_i18n'] : array();
         if (is_array($modal_i18n)) {
+            // Sanitize each value
+            foreach ($modal_i18n as $key => $value) {
+                // For text areas, preserve line breaks but sanitize content
+                if (in_array($key, ['sharing.text', 'sdk.wallet.login.text_sharing', 'sdk.wallet.login.text_referred'])) {
+                    $modal_i18n[$key] = sanitize_textarea_field($value);
+                } else {
+                    $modal_i18n[$key] = sanitize_text_field($value);
+                }
+            }
+            
+            // Remove empty values
             $modal_i18n = array_filter($modal_i18n, function($value) {
                 return $value !== '';
             });
+            
+            // Handle special case: if text_referred is set, also set it as text
+            if (isset($modal_i18n['sdk.wallet.login.text_referred'])) {
+                $modal_i18n['sdk.wallet.login.text'] = $modal_i18n['sdk.wallet.login.text_referred'];
+            }
         }
 
         update_option('frak_app_name', $app_name);
