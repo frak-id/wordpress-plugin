@@ -8,8 +8,8 @@
         "simplito/elliptic-php": "^1.0"
     },
     "autoload": {
-        "psr-4": {
-            "Frak\\WordPress\\": "includes/"
-        }
+        "classmap": [
+            "includes/"
+        ]
     }
 }

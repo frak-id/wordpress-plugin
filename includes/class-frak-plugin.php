@@ -27,7 +27,6 @@ class Frak_Plugin {
         require_once FRAK_PLUGIN_DIR . 'includes/class-frak-webhook-helper.php';
         require_once FRAK_PLUGIN_DIR . 'admin/class-frak-admin.php';
         require_once FRAK_PLUGIN_DIR . 'includes/class-frak-frontend.php';
-        require_once FRAK_PLUGIN_DIR . 'includes/class-frak-config-endpoint.php';
         
         if (class_exists('WooCommerce')) {
             require_once FRAK_PLUGIN_DIR . 'includes/class-frak-woocommerce.php';
@@ -42,9 +41,6 @@ class Frak_Plugin {
     }
 
     public function init() {
-        // Initialize config endpoint for all contexts
-        Frak_Config_Endpoint::instance();
-        
         if (is_admin()) {
             Frak_Admin::instance();
         } else {
@@ -57,8 +53,8 @@ class Frak_Plugin {
     }
 
     public function activate() {
-        // Flush rewrite rules for config endpoint
-        Frak_Config_Endpoint::instance()->flush_rewrite_rules();
+        // Flush rewrite rules
+        flush_rewrite_rules();
     }
 
     public function deactivate() {

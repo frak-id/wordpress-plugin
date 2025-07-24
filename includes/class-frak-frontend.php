@@ -21,14 +21,21 @@ class Frak_Frontend {
         $has_config = !empty(get_option('frak_app_name', ''));
         
         if ($has_config) {
-            // Load complete script from endpoint (includes SDK + configuration)
+            // Enqueue the Frak SDK from CDN
             wp_enqueue_script(
-                'frak-complete',
-                Frak_Config_Endpoint::get_config_url(),
+                'frak-sdk',
+                'https://cdn.jsdelivr.net/npm/@frak-labs/components',
                 array(),
                 null,
                 true // Load in footer
             );
+            
+            // Add defer attribute to the SDK script
+            wp_script_add_data('frak-sdk', 'defer', true);
+            
+            // Generate and add inline configuration script
+            $inline_script = $this->generate_config_script();
+            wp_add_inline_script('frak-sdk', $inline_script, 'after');
         }
     }
 
@@ -49,5 +56,82 @@ class Frak_Frontend {
         }
         
         echo '<frak-button-wallet ' . implode(' ', $attributes) . '></frak-button-wallet>';
+    }
+    
+    /**
+     * Generate the configuration script
+     */
+    private function generate_config_script() {
+        // Get options with proper escaping
+        $app_name = esc_js(get_option('frak_app_name', get_bloginfo('name')));
+        $logo_url = esc_js(get_option('frak_logo_url', ''));
+        $modal_language = get_option('frak_modal_language', 'default');
+        $floating_button_position = esc_js(get_option('frak_floating_button_position', 'right'));
+        $modal_i18n = get_option('frak_modal_i18n', '{}');
+        
+        // Escape the shop name for JS
+        $shop_name = esc_js(get_bloginfo('name'));
+        
+        // Handle language setting
+        $modal_lng = $modal_language === 'default' ? 'default' : esc_js($modal_language);
+        
+        // Build the configuration object
+        $config = array(
+            'walletUrl' => 'https://wallet.frak.id',
+            'metadata' => array(
+                'name' => $shop_name,
+                'lang' => $modal_lng === 'default' ? null : $modal_lng,
+                'logoUrl' => $logo_url
+            ),
+            'customizations' => array(
+                'i18n' => json_decode($modal_i18n, true) ?: new stdClass()
+            ),
+            'domain' => 'window.location.host'
+        );
+        
+        $modal_config = array(
+            'login' => array(
+                'allowSso' => true,
+                'ssoMetadata' => array(
+                    'logoUrl' => $logo_url,
+                    'homepageLink' => 'window.location.host'
+                )
+            )
+        );
+        
+        $modal_share_config = array(
+            'link' => 'window.location.href'
+        );
+        
+        $modal_wallet_config = array(
+            'metadata' => array(
+                'position' => $floating_button_position
+            )
+        );
+        
+        // Convert to JSON and handle dynamic values
+        $config_json = json_encode($config, JSON_UNESCAPED_SLASHES);
+        $modal_config_json = json_encode($modal_config, JSON_UNESCAPED_SLASHES);
+        $modal_share_config_json = json_encode($modal_share_config, JSON_UNESCAPED_SLASHES);
+        $modal_wallet_config_json = json_encode($modal_wallet_config, JSON_UNESCAPED_SLASHES);
+        
+        // Replace quoted dynamic values with actual JavaScript expressions
+        $config_json = str_replace('"window.location.host"', 'window.location.host', $config_json);
+        $modal_config_json = str_replace('"window.location.host"', 'window.location.host', $modal_config_json);
+        $modal_share_config_json = str_replace('"window.location.href"', 'window.location.href', $modal_share_config_json);
+        
+        // Remove null values from the JSON
+        $config_json = preg_replace('/,?"lang":null/', '', $config_json);
+        
+        // Generate the inline script
+        $script = "
+window.FrakSetup = {
+    config: {$config_json},
+    modalConfig: {$modal_config_json},
+    modalShareConfig: {$modal_share_config_json},
+    modalWalletConfig: {$modal_wallet_config_json}
+};";
+        
+        return $script;
     }
 }

@@ -14,10 +14,8 @@ rm -rf ${BUILD_DIR} ${DIST_DIR}
 mkdir -p ${BUILD_DIR}/${PLUGIN_NAME} ${DIST_DIR}
 
 # Install composer dependencies
-if [ -f "composer.json" ]; then
-    echo "Installing composer dependencies..."
-    composer install --no-dev --optimize-autoloader
-fi
+echo "Installing composer dependencies..."
+composer install --no-dev --optimize-autoloader
 
 # Copy all files to build directory
 rsync -av --exclude-from='.distignore' \

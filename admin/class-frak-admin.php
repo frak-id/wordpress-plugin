@@ -198,11 +198,48 @@ class Frak_Admin {
         update_option('frak_modal_language', $modal_language);
         update_option('frak_modal_i18n', json_encode($modal_i18n));
         
-        // Update config last modified timestamp for cache busting
-        if (class_exists('Frak_Config_Endpoint')) {
-            Frak_Config_Endpoint::update_last_modified();
-        }
+        // Clear any caches to ensure the new configuration is loaded
+        $this->clear_caches();
 
+    }
+
+    /**
+     * Clear caches from popular caching plugins
+     */
+    private function clear_caches() {
+        // WP Rocket
+        if (function_exists('rocket_clean_domain')) {
+            rocket_clean_domain();
+        }
+        
+        // W3 Total Cache
+        if (function_exists('w3tc_flush_all')) {
+            w3tc_flush_all();
+        }
+        
+        // WP Super Cache
+        if (function_exists('wp_cache_clear_cache')) {
+            wp_cache_clear_cache();
+        }
+        
+        // WP Fastest Cache
+        if (class_exists('WpFastestCache') && method_exists('WpFastestCache', 'deleteCache')) {
+            $wpfc = new WpFastestCache();
+            $wpfc->deleteCache(true);
+        }
+        
+        // LiteSpeed Cache
+        if (class_exists('LiteSpeed\Purge')) {
+            LiteSpeed\Purge::purge_all();
+        }
+        
+        // Autoptimize
+        if (class_exists('autoptimizeCache') && method_exists('autoptimizeCache', 'clearall')) {
+            autoptimizeCache::clearall();
+        }
+        
+        // Clear WordPress object cache
+        wp_cache_flush();
     }
 
     private function render_settings_page() {
