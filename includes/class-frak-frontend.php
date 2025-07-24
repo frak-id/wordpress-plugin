@@ -18,28 +18,18 @@ class Frak_Frontend {
 
     public function enqueue_scripts() {
         // Check if we have a configuration
-        $has_config = !empty(get_option('frak_custom_config', '')) || 
-                      !empty(get_option('frak_app_name', ''));
+        $has_config = !empty(get_option('frak_app_name', ''));
         
         if ($has_config) {
-            // Load configuration from endpoint with cache busting
+            // Load complete script from endpoint (includes SDK + configuration)
             wp_enqueue_script(
-                'frak-config',
+                'frak-complete',
                 Frak_Config_Endpoint::get_config_url(),
                 array(),
                 null,
-                false // Load in head for early initialization
+                true // Load in footer
             );
         }
-        
-        // Load the Frak SDK
-        wp_enqueue_script(
-            'frak-sdk',
-            'https://cdn.jsdelivr.net/npm/@frak-labs/components@latest/cdn/components.js',
-            $has_config ? array('frak-config') : array(),
-            null,
-            array('strategy' => 'defer')
-        );
     }
 
     public function add_floating_button() {

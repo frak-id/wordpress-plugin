@@ -43,17 +43,11 @@ class Frak_Config_Endpoint {
             return;
         }
 
-        // Get the configuration
-        $config = get_option('frak_custom_config', '');
-        
-        if (empty($config)) {
-            // Generate default config if none exists
-            $admin = Frak_Admin::instance();
-            $config = $this->get_compiled_config();
-        }
+        // Generate the full script
+        $script = $this->generate_full_script();
 
-        // Generate ETag based on config content
-        $etag = md5($config);
+        // Generate ETag based on script content
+        $etag = md5($script);
         $last_modified = get_option('frak_config_last_modified', time());
         
         // Set proper headers
@@ -66,85 +60,68 @@ class Frak_Config_Endpoint {
         }
 
         // Output the JavaScript
-        header('Content-Type: application/javascript; charset=utf-8');
+        header('Content-Type: text/html; charset=utf-8');
         
-        // Apply minification if enabled
-        if (get_option('frak_minify_config', 0) && !defined('SCRIPT_DEBUG')) {
-            $config = $this->minify_javascript($config);
-        } else {
-            // Add header comment for non-minified version
-            $config = "/* Frak Configuration - Generated: " . date('Y-m-d H:i:s') . " */\n" . $config;
-        }
-        
-        echo $config;
+        echo $script;
         exit;
     }
 
     /**
-     * Get compiled configuration from individual options
+     * Generate the full script including SDK loading and configuration
      */
-    private function get_compiled_config() {
-        $app_name = get_option('frak_app_name', get_bloginfo('name'));
-        $logo_url = get_option('frak_logo_url', '');
+    private function generate_full_script() {
+        $app_name = esc_js(get_option('frak_app_name', get_bloginfo('name')));
+        $logo_url = esc_js(get_option('frak_logo_url', ''));
         $modal_language = get_option('frak_modal_language', 'default');
-        $floating_button_position = get_option('frak_floating_button_position', 'right');
+        $floating_button_position = esc_js(get_option('frak_floating_button_position', 'right'));
         $modal_i18n = get_option('frak_modal_i18n', '{}');
         
-        // Handle language setting
-        $lang_code = $modal_language === 'default' ? 'undefined' : "'{$modal_language}'";
+        // Escape the shop name for JS
+        $shop_name = esc_js(get_bloginfo('name'));
         
-        return <<<JS
-let logoUrl = '{$logo_url}';
-const lang = {$lang_code};
+        // Handle language setting
+        $modal_lng = $modal_language === 'default' ? 'default' : esc_js($modal_language);
+        
+        // Properly escape the i18n JSON
+        $modal_i18n_escaped = str_replace(
+            array('&', '<', '>', "'", '"'),
+            array('&amp;', '&lt;', '&gt;', '&#39;', '&quot;'),
+            $modal_i18n
+        );
+        
+        return <<<HTML
+<script src="https://cdn.jsdelivr.net/npm/@frak-labs/components" defer="defer"></script>
+<script type="text/javascript">
+  let logoUrl = '{$logo_url}';
+  const lang = '{$modal_lng}' === 'default' ? undefined : '{$modal_lng}';
 
-let i18n = {};
-try {
-    i18n = JSON.parse('{$modal_i18n}'.replace(
-        /&amp;|&lt;|&gt;|&#39;|&quot;/g,
-        tag =>
-          ({
-            '&amp;': '&',
-            '&lt;': '<',
-            '&gt;': '>',
-            '&#39;': "'",
-            '&quot;': '"'
-          }[tag] || tag)
-    )) || {};
-} catch (error) {
+  let i18n = {};
+  try {
+    i18n = JSON.parse('{$modal_i18n_escaped}'.replace(
+    /&amp;|&lt;|&gt;|&#39;|&quot;/g,
+    tag =>
+      ({
+        '&amp;': '&',
+        '&lt;': '<',
+        '&gt;': '>',
+        '&#39;': "'",
+        '&quot;': '"'
+      }[tag] || tag)
+  )) || {};
+  } catch (error) {
     console.error('Error parsing i18n customizations:', error);
-}
+  }
 
-window.FrakSetup = {
-    config: { 
-        walletUrl: 'https://wallet.frak.id', 
-        metadata: { 
-            name: '{$app_name}', 
-            lang, 
-            logoUrl 
-        }, 
-        customizations: { i18n }, 
-        domain: window.location.host 
-    },
-    modalConfig: { 
-        login: { 
-            allowSso: true, 
-            ssoMetadata: { 
-                logoUrl, 
-                homepageLink: window.location.host 
-            } 
-        } 
-    },
-    modalShareConfig: { 
-        link: window.location.href 
-    },
-    modalWalletConfig: { 
-        metadata: { 
-            position: '{$floating_button_position}' 
-        } 
-    },
-};
-JS;
+  window.FrakSetup = {
+    config: { walletUrl: 'https://wallet.frak.id', metadata: { name: '{$shop_name}', lang, logoUrl }, customizations: { i18n }, domain: window.location.host },
+    modalConfig: { login: { allowSso: true, ssoMetadata: { logoUrl, homepageLink: window.location.host } } },
+    modalShareConfig: { link: window.location.href },
+    modalWalletConfig: { metadata: { position: '{$floating_button_position}' } },
+  };
+</script>
+HTML;
     }
+
 
     /**
      * Set proper cache headers
@@ -186,8 +163,15 @@ JS;
      * Get config URL with version parameter
      */
     public static function get_config_url() {
-        $config = get_option('frak_custom_config', '');
-        $version = substr(md5($config), 0, 8);
+        // Create version hash based on all settings
+        $settings = array(
+            'app_name' => get_option('frak_app_name', ''),
+            'logo_url' => get_option('frak_logo_url', ''),
+            'modal_language' => get_option('frak_modal_language', 'default'),
+            'floating_button_position' => get_option('frak_floating_button_position', 'right'),
+            'modal_i18n' => get_option('frak_modal_i18n', '{}')
+        );
+        $version = substr(md5(json_encode($settings)), 0, 8);
         
         return home_url('/frak-config.js?v=' . $version);
     }

@@ -186,16 +186,6 @@
                 </table>
             </div>
         </div>
-        
-        <!-- Advanced Configuration Section -->
-        <div class="frak-section">
-            <h2>Advanced Configuration</h2>
-            <p>Customize your Frak configuration below:</p>
-            <textarea id="frak_custom_config" name="frak_custom_config" 
-                      style="width: 100%; height: 400px; font-family: monospace;"
-            ><?php echo $custom_config; ?></textarea>
-        </div>
-        
         <!-- Purchase Tracking Section -->
         <div class="frak-section">
             <h2>Purchase Tracking</h2>

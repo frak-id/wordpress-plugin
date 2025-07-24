@@ -131,11 +131,6 @@
     color: #dc3232;
 }
 
-/* Advanced configuration textarea */
-#frak_custom_config {
-    background: #f0f0f1;
-    border: 1px solid #8c8f94;
-}
 
 /* Button spacing */
 .button + .button {

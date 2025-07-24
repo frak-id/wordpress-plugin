@@ -36,11 +36,6 @@ class Frak_Admin {
     public function register_settings() {
         register_setting('frak_settings', 'frak_app_name');
         register_setting('frak_settings', 'frak_logo_url');
-        register_setting('frak_settings', 'frak_custom_config', array(
-            'sanitize_callback' => function($input) {
-                return stripslashes($input);
-            }
-        ));
         register_setting('frak_settings', 'frak_enable_purchase_tracking');
         register_setting('frak_settings', 'frak_enable_floating_button');
         register_setting('frak_settings', 'frak_show_reward');
@@ -178,7 +173,6 @@ class Frak_Admin {
             }
         }
         
-        $custom_config = stripslashes($_POST['frak_custom_config']);
         $enable_tracking = isset($_POST['frak_enable_purchase_tracking']) ? 1 : 0;
         $enable_button = isset($_POST['frak_enable_floating_button']) ? 1 : 0;
         $show_reward = isset($_POST['frak_show_reward']) ? 1 : 0;
@@ -196,7 +190,6 @@ class Frak_Admin {
 
         update_option('frak_app_name', $app_name);
         update_option('frak_logo_url', $logo_url);
-        update_option('frak_custom_config', $custom_config);
         update_option('frak_enable_purchase_tracking', $enable_tracking);
         update_option('frak_enable_floating_button', $enable_button);
         update_option('frak_show_reward', $show_reward);
@@ -219,7 +212,6 @@ class Frak_Admin {
         
         $app_name = get_option('frak_app_name', $default_app_name);
         $logo_url = get_option('frak_logo_url', $default_logo_url);
-        $custom_config = get_option('frak_custom_config', '');
         // Auto-enable WooCommerce tracking if WooCommerce is active and setting hasn't been configured yet
         $enable_tracking_option = get_option('frak_enable_purchase_tracking', null);
         if ($enable_tracking_option === null && class_exists('WooCommerce')) {
@@ -234,10 +226,6 @@ class Frak_Admin {
         $floating_button_position = get_option('frak_floating_button_position', 'right');
         $modal_language = get_option('frak_modal_language', 'default');
         $modal_i18n = json_decode(get_option('frak_modal_i18n', '{}'), true);
-        
-        if (empty($custom_config)) {
-            $custom_config = $this->get_default_config($app_name, $logo_url);
-        }
         
         include FRAK_PLUGIN_DIR . 'admin/views/settings-page.php';
     }
@@ -263,66 +251,6 @@ class Frak_Admin {
         return '';
     }
 
-    private function get_default_config($app_name, $logo_url) {
-        $modal_language = get_option('frak_modal_language', 'default');
-        $floating_button_position = get_option('frak_floating_button_position', 'right');
-        $modal_i18n = get_option('frak_modal_i18n', '{}');
-        
-        // Handle language setting
-        $lang_code = $modal_language === 'default' ? 'undefined' : "'{$modal_language}'";
-        
-        return <<<JS
-let logoUrl = '{$logo_url}';
-const lang = {$lang_code};
-
-let i18n = {};
-try {
-    i18n = JSON.parse('{$modal_i18n}'.replace(
-        /&amp;|&lt;|&gt;|&#39;|&quot;/g,
-        tag =>
-          ({
-            '&amp;': '&',
-            '&lt;': '<',
-            '&gt;': '>',
-            '&#39;': "'",
-            '&quot;': '"'
-          }[tag] || tag)
-    )) || {};
-} catch (error) {
-    console.error('Error parsing i18n customizations:', error);
-}
-
-window.FrakSetup = {
-    config: { 
-        walletUrl: 'https://wallet.frak.id', 
-        metadata: { 
-            name: '{$app_name}', 
-            lang, 
-            logoUrl 
-        }, 
-        customizations: { i18n }, 
-        domain: window.location.host 
-    },
-    modalConfig: { 
-        login: { 
-            allowSso: true, 
-            ssoMetadata: { 
-                logoUrl, 
-                homepageLink: window.location.host 
-            } 
-        } 
-    },
-    modalShareConfig: { 
-        link: window.location.href 
-    },
-    modalWalletConfig: { 
-        metadata: { 
-            position: '{$floating_button_position}' 
-        } 
-    },
-};
-JS;
-    }
 
     private function handle_logo_upload($file) {
         // Check file type
