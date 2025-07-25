@@ -42,7 +42,7 @@ class Frak_WooCommerce {
         $payload = array(
             'customerId' => $customer_id,
             'orderId' => $order_id,
-            'token' => $order_key
+            'token' => $order_key . '_' . $order_id,
         );
 
         return "
@@ -50,7 +50,7 @@ class Frak_WooCommerce {
             try {
                 const interactionToken = sessionStorage.getItem('frak-wallet-interaction-token');
                 if (interactionToken) {
-                    fetch('https://backend.frak.id/interactions/listenForPurchase', {
+                    fetch('https://backend.frak.id/wallet/interactions/listenForPurchase', {
                         method: 'POST',
                         headers: {
                             'Accept': 'application/json',
