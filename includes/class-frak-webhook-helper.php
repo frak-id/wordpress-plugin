@@ -84,7 +84,7 @@ class Frak_Webhook_Helper {
 				throw new Exception( 'Failed to encode webhook payload as JSON' );
 			}
 
-			$signature = hash_hmac( 'sha256', $json_body, $webhook_secret );
+			$signature = base64_encode( hash_hmac( 'sha256', $json_body, $webhook_secret, true ) );
 
 			$response = wp_remote_post(
 				$webhook_url,
@@ -256,7 +256,7 @@ class Frak_Webhook_Helper {
 				throw new Exception( 'Webhook secret not configured' );
 			}
 
-			$signature = hash_hmac( 'sha256', $json_body, $webhook_secret );
+			$signature = base64_encode( hash_hmac( 'sha256', $json_body, $webhook_secret, true ) );
 
 			$response = wp_remote_post(
 				$webhook_url,
