@@ -1,5 +1,7 @@
 # Frak WordPress Plugin
 
+Migrated to the [monorepo](https://github.com/frak-id/wallet)
+
 WordPress integration plugin for the Frak rewards and engagement platform.
 
 ## Structure
